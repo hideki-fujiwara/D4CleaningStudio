@@ -116,7 +116,7 @@ function AppMenu() {
         {/* アプリアイコンとタイトル */}
         <div className="flex items-center gap-2">
           <span className="i-mdi-database-cog h-10 w-10 text-base-content" aria-hidden="true" />
-          <span className="ml-2 text-lg font-bold text-base-content">BaseProject</span>
+          <span className="ml-2 text-lg font-bold text-base-content">D4CleaningStudio</span>
         </div>
 
         {/* ファイルメニュー */}

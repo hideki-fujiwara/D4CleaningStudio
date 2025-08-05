@@ -2,7 +2,7 @@ import { load } from "@tauri-apps/plugin-store";
 import { configDir } from "@tauri-apps/api/path";
 import ConsoleMsg from "./ConsoleMsg";
 
-const STORE_FILE = "BaseProject.config";
+const STORE_FILE = "D4CleaningStudio.config";
 
 /**
  * STORE プラグイン経由で設定を読み込む
@@ -12,7 +12,7 @@ export async function loadStore() {
   try {
     ConsoleMsg("info", "ストアから設定を読み込み開始");
     // 設定ディレクトリのパス
-    const dir = `${await configDir()}\\BaseProject`;
+    const dir = `${await configDir()}\\D4CleaningStudio`;
     // ストアファイルをオープン（なければ自動生成）
     const store = await load(`${dir}\\${STORE_FILE}`);
     ConsoleMsg("debug", `ストアパス: ${dir}\\${STORE_FILE}`);
@@ -38,7 +38,7 @@ export async function loadStore() {
 export async function saveStore({ projectConfig, windowConfig, windowState }) {
   try {
     ConsoleMsg("info", "ストアへの設定保存開始");
-    const dir = `${await configDir()}\\BaseProject`;
+    const dir = `${await configDir()}\\D4CleaningStudio`;
     const store = await load(`${dir}\\${STORE_FILE}`);
     ConsoleMsg("debug", `ストアパス: ${dir}\\${STORE_FILE}`);
 

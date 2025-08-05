@@ -36,7 +36,7 @@
           "path": "$CONFIG/*"
         },
         {
-          "path": "$CONFIG/BaseProject/*"
+          "path": "$CONFIG/D4CleaningStudio/*"
         }
       ]
     },
@@ -47,7 +47,7 @@
           "path": "$CONFIG/*"
         },
         {
-          "path": "$CONFIG/BaseProject/*"
+          "path": "$CONFIG/D4CleaningStudio/*"
         }
       ]
     },
@@ -58,7 +58,7 @@
           "path": "$CONFIG/*"
         },
         {
-          "path": "$CONFIG/BaseProject/*"
+          "path": "$CONFIG/D4CleaningStudio/*"
         }
       ]
     },

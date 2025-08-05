@@ -79,7 +79,7 @@ impl Default for Config {
         },
       },
       window_config: WindowConfig {
-        title: String::from("BaseProject 2025"),
+        title: String::from("D4CleaningStudio 2025"),
         min_width: 1024,
         min_height: 768,
         max_width: 7680,
@@ -96,7 +96,7 @@ pub fn initialize_store(app: &AppHandle, config_dir: &PathBuf) -> Result<(), Box
   std::fs::create_dir_all(config_dir)?;
   
   // 設定ファイルのフルパスを構築
-  let path = config_dir.join("BaseProject.config");
+  let path = config_dir.join("D4CleaningStudio.config");
   info!("設定ファイルのパス: {}", path.display());
   
   // Tauri のストアハンドルを取得
@@ -143,7 +143,7 @@ pub fn initialize_store(app: &AppHandle, config_dir: &PathBuf) -> Result<(), Box
 
 /// プロジェクト設定を読み込み
 pub fn load_project_config(app: &AppHandle, config_dir: &PathBuf) -> Result<ProjectConfig, Box<dyn std::error::Error>> {
-  let path = config_dir.join("BaseProject.config");
+  let path = config_dir.join("D4CleaningStudio.config");
   let store = app.store(path.to_string_lossy().as_ref())?;
   let cfg: ProjectConfig = match store.get("project_config") {
     Some(v) => serde_json::from_value(v.clone())?,
@@ -155,7 +155,7 @@ pub fn load_project_config(app: &AppHandle, config_dir: &PathBuf) -> Result<Proj
 
 /// ウィンドウ基本設定を読み込み
 pub fn load_window_config(app: &AppHandle, config_dir: &PathBuf) -> Result<WindowConfig, Box<dyn std::error::Error>> {
-  let path = config_dir.join("BaseProject.config");
+  let path = config_dir.join("D4CleaningStudio.config");
   let store = app.store(path.to_string_lossy().as_ref())?;
   let cfg: WindowConfig = match store.get("window_config") {
     Some(v) => serde_json::from_value(v.clone())?,
@@ -167,7 +167,7 @@ pub fn load_window_config(app: &AppHandle, config_dir: &PathBuf) -> Result<Windo
 
 /// ウィンドウ状態を読み込み
 pub fn load_window_state(app: &AppHandle, config_dir: &PathBuf) -> Result<WindowState, Box<dyn std::error::Error>> {
-  let path = config_dir.join("BaseProject.config");
+  let path = config_dir.join("D4CleaningStudio.config");
   let store = app.store(path.to_string_lossy().as_ref())?;
   let st = match store.get("window_state") {
     Some(v) => serde_json::from_value(v.clone())?,

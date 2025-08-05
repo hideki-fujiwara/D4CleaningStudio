@@ -55,13 +55,13 @@ pub fn run() {
           Target::new(TargetKind::Webview), // Webview（ブラウザコンソール）
           Target::new(TargetKind::Folder {
             // ファイル出力
-            // ログファイル保存先: ユーザー設定ディレクトリ/BaseProject/
+            // ログファイル保存先: ユーザー設定ディレクトリ/D4CleaningStudio/
             path: std::path::PathBuf::from(
               dirs_2::config_dir()
                 .expect("Failed to get config dir") // 設定ディレクトリ取得失敗時はパニック
-                .join("BaseProject"), // アプリ専用サブディレクトリ
+                .join("D4CleaningStudio"), // アプリ専用サブディレクトリ
             ),
-            file_name: Some("BaseProject".to_string()), // ログファイル名
+            file_name: Some("D4CleaningStudio".to_string()), // ログファイル名
           }),
         ])
         .max_file_size(4_000_000) // ログファイル最大サイズ: 4MB
@@ -95,7 +95,7 @@ pub fn run() {
     // アプリケーション初期化処理
     // ========================================================================================
     .setup(|app| {
-      info!("BaseProject プログラムスタート");
+      info!("D4CleaningStudio プログラムスタート");
 
       // システム監視を開始
       let _app_handle = app.handle().clone();
@@ -107,7 +107,7 @@ pub fn run() {
       // 設定ディレクトリの取得・準備
       // ----------------------------------------------------------------------------------------
       let config_dir = match dirs_2::config_dir() {
-        Some(dir) => dir.join("BaseProject"), // %APPDATA%/BaseProject (Windows)
+        Some(dir) => dir.join("D4CleaningStudio"), // %APPDATA%/D4CleaningStudio (Windows)
         None => {
           error!("設定ディレクトリの取得に失敗しました");
           return Ok(()); // エラーでも続行（機能制限モード）
