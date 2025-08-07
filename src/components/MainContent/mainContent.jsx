@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import ConsoleMsg from "../../utils/ConsoleMsg";
 import { loadMainPanelLayout, saveMainPanelLayout } from "../../utils/StoreManager";
+import ProjectTree from "../ProjectTree/ProjectTree";
 
 /**
  * メインコンテンツコンポーネント
@@ -197,12 +198,7 @@ function MainContent() {
           minSize={10} // 最小サイズ（10%）
           className="overflow-auto"
         >
-          <div className="h-full p-4 text-base-content">
-            {/* 左サイドバーのコンテンツ */}
-            左パネルサイドバー
-            {/* デバッグ情報: 現在のサイズ表示 */}
-            <p className="mt-4 text-accent">現在のサイズ: {horizontalLayout[0].toFixed(2)}%</p>
-          </div>
+          <ProjectTree currentSize={horizontalLayout[0]} />
         </Panel>
 
         {/* 左パネルと中央パネルの境界線 */}

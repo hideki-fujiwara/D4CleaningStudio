@@ -5,6 +5,20 @@ import ConsoleMsg from "./ConsoleMsg";
 const STORE_FILE = "D4CleaningStudio.config";
 
 /**
+ * ストアインスタンスを取得
+ * @returns {Promise<Store>} ストアインスタンス
+ */
+async function getStore() {
+  try {
+    const dir = `${await configDir()}\\D4CleaningStudio`;
+    return await load(`${dir}\\${STORE_FILE}`);
+  } catch (error) {
+    ConsoleMsg("error", `ストア取得エラー: ${error}`);
+    throw error;
+  }
+}
+
+/**
  * STORE プラグイン経由で設定を読み込む
  * @returns {Promise<{projectConfig: object, windowConfig: object, windowState: object}>}
  */
@@ -89,3 +103,81 @@ export async function saveMainPanelLayout(horizontal, vertical) {
   };
   await saveStore(newCfg);
 }
+
+/**
+ * プロジェクト設定を取得
+ * @returns {Promise<object>} プロジェクト設定
+ */
+export async function getProjectConfig() {
+  try {
+    const cfg = await loadStore();
+    return cfg.projectConfig;
+  } catch (error) {
+    ConsoleMsg("error", `プロジェクト設定の取得エラー: ${error}`);
+    throw error;
+  }
+}
+
+/**
+ * プロジェクト設定を保存
+ * @param {object} projectConfig プロジェクト設定
+ * @returns {Promise<void>}
+ */
+export async function setProjectConfig(projectConfig) {
+  try {
+    const cfg = await loadStore();
+    const newCfg = {
+      ...cfg,
+      projectConfig: {
+        ...cfg.projectConfig,
+        ...projectConfig,
+      },
+    };
+    await saveStore(newCfg);
+    ConsoleMsg("info", "プロジェクト設定を保存");
+  } catch (error) {
+    ConsoleMsg("error", `プロジェクト設定の保存エラー: ${error}`);
+    throw error;
+  }
+}
+
+/**
+ * プロジェクト設定を更新
+ * @param {object} updates 更新するプロジェクト設定
+ * @returns {Promise<void>}
+ */
+export async function updateProjectConfig(updates) {
+  try {
+    const cfg = await loadStore();
+    const newCfg = {
+      ...cfg,
+      projectConfig: {
+        ...cfg.projectConfig,
+        ...updates,
+      },
+    };
+    await saveStore(newCfg);
+    ConsoleMsg("info", "プロジェクト設定を更新しました");
+  } catch (error) {
+    ConsoleMsg("error", `プロジェクト設定の更新エラー: ${error}`);
+    throw error;
+  }
+}
+
+/**
+ * プロジェクト名を更新
+ * @param {string} name 新しいプロジェクト名
+ * @returns {Promise<void>}
+ */
+export async function updateProjectName(name) {
+  try {
+    await updateProjectConfig({ name });
+    ConsoleMsg("info", `プロジェクト名を更新: ${name}`);
+  } catch (error) {
+    ConsoleMsg("error", `プロジェクト名の更新エラー: ${error}`);
+    throw error;
+  }
+}
+
+const config = await loadStore();
+const projectName = config.projectConfig?.name || "D4CleaningStudio";
