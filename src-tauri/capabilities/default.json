@@ -2,13 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default",
-    "log:default",
     "core:window:default",
     "core:window:allow-close",
     "core:window:allow-minimize",
@@ -16,52 +12,30 @@
     "core:window:allow-start-dragging",
     "core:window:allow-unmaximize",
     "core:window:allow-center",
-    "dialog:default",
     "core:path:allow-dirname",
+    "dialog:default",
+    "opener:default",
+    "log:default",
+    "store:default",
+    "fs:default",
     "fs:allow-config-write",
     "fs:allow-config-meta",
     "fs:allow-config-read",
     "fs:allow-config-meta-recursive",
     "fs:allow-config-write-recursive",
     "fs:allow-config-read-recursive",
-    "fs:allow-read-text-file",
-    "fs:allow-write-text-file",
     "global-shortcut:allow-is-registered",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
-    {
-      "identifier": "fs:allow-exists",
-      "allow": [
-        {
-          "path": "$CONFIG/*"
-        },
-        {
-          "path": "$CONFIG/D4CleaningStudio/*"
-        }
-      ]
-    },
-    {
-      "identifier": "fs:allow-write-text-file",
-      "allow": [
-        {
-          "path": "$CONFIG/*"
-        },
-        {
-          "path": "$CONFIG/D4CleaningStudio/*"
-        }
-      ]
-    },
-    {
-      "identifier": "fs:allow-read-text-file",
-      "allow": [
-        {
-          "path": "$CONFIG/*"
-        },
-        {
-          "path": "$CONFIG/D4CleaningStudio/*"
-        }
-      ]
-    },
-    "store:default"
+    { "identifier": "fs:allow-exists", "allow": [{ "path": "**" }] },
+
+    { "identifier": "fs:allow-read", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-read-dir", "allow": [{ "path": "**" }] },
+
+    { "identifier": "fs:allow-create", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-write", "allow": [{ "path": "**" }] },
+
+    { "identifier": "fs:allow-remove", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-rename", "allow": [{ "path": "**" }] }
   ]
 }
