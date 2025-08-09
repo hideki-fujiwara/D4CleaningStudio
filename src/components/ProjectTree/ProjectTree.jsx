@@ -20,6 +20,7 @@ import ConfirmDialog from "./ConfirmDialog";
  *
  * @param {Object} props - コンポーネントのプロパティ
  * @param {number} props.currentSize - 現在のサイズ（パーセンテージ）
+ * @returns {JSX.Element} プロジェクトエキスプローラのJSX要素
  */
 function ProjectTree({ currentSize }) {
   // === カスタムフックからの状態とハンドラーを取得 ===
@@ -99,39 +100,36 @@ function ProjectTree({ currentSize }) {
    * ツリーアイテムの再帰的レンダリング
    * TreeItemComponent を使用して各アイテムを描画
    */
-  const renderItem = useCallback(function renderItem(item) {
-    // ツールバーハンドラーをまとめたオブジェクト
-    const toolbarHandlers = {
-      handleNewFile,
-      handleNewFolder,
-      handleRefresh,
-      handleCollapseAll,
-    };
+  const renderItem = useCallback(
+    function renderItem(item) {
+      // ツールバーハンドラーをまとめたオブジェクト
+      const toolbarHandlers = {
+        handleNewFile,
+        handleNewFolder,
+        handleRefresh,
+        handleCollapseAll,
+      };
 
-    return (
-      <TreeItemComponent 
-        item={item} 
-        renderItem={renderItem} 
-        toolbarHandlers={toolbarHandlers}
-      />
-    );
-  }, [handleNewFile, handleNewFolder, handleRefresh, handleCollapseAll]);
+      return <TreeItemComponent item={item} renderItem={renderItem} toolbarHandlers={toolbarHandlers} />;
+    },
+    [handleNewFile, handleNewFolder, handleRefresh, handleCollapseAll]
+  );
 
   // === メインレンダリング ===
   return (
-    <div className="h-full flex flex-col bg-base-100">
-      {/* ヘッダー部分 */}
-      <div className="border-b border-base-200 p-2">
-        <div className="flex items-center justify-between">
-          <h2 id="tree-heading" className="text-sm font-semibold text-base-content">
-            プロジェクトエキスプローラ
-          </h2>
-          <p className="text-xs text-accent">{currentSize?.toFixed?.(0)}%</p>
-        </div>
+    <div className="h-full flex flex-col bg-base-100 rounded">
+      {/* ヘッダー部分（左に余白追加） */}
+      <div className="flex flex-col justify-center py-1 rounded px-2">
+        <h2
+          id="tree-heading"
+          className="shrink-0 text-sm py-1 font-semibold text-base-content"
+        >
+          プロジェクト エキスプローラ
+        </h2>
       </div>
 
       {/* ツリー表示エリア（メイン部分） */}
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex flex-col overflow-y-auto">
         <Tree
           aria-label="プロジェクトファイルツリー"
           aria-labelledby="tree-heading" // ヘッダーとの関連付け
@@ -153,18 +151,15 @@ function ProjectTree({ currentSize }) {
       <div className="border-t border-base-200 p-2">
         <div className="text-xs text-base-content/70 flex items-center space-x-1">
           <div className="i-lucide-info w-3 h-3" />
-          <span>{selectedKeys.size > 0 ? `選択中: ${Array.from(selectedKeys)[0]}` : "ファイルを選択してください"}</span>
+          <span>{selectedKeys.size > 0 ? `選択中: ${Array.from(selectedKeys).sort()[0]}` : "ファイルを選択してください"}</span>
         </div>
       </div>
-
       {/* 確認ダイアログ */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         onOpenChange={(isOpen) => {
-          // ダイアログが閉じられた時の処理
           if (!isOpen) {
-            confirmDialog.onCancel?.(); // キャンセルコールバック実行
-            closeDialog(); // ダイアログを閉じる
+            handleCancel();
           }
         }}
         title={confirmDialog.title}

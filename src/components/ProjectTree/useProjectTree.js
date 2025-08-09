@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { readDir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
@@ -15,9 +13,16 @@ import { DEFAULT_PROJECT_NAME, INITIAL_EXPANDED_KEYS } from "./constants";
  */
 export const useProjectTree = () => {
   // === 状態管理 ===
+  // ツリーで展開されているノードのキーを管理（Set形式）
   const [expandedKeys, setExpandedKeys] = useState(() => new Set(["root"]));
+
+  // ツリーで選択されているノードのキーを管理（Set形式）
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
+
+  // プロジェクト名を管理（設定ファイルから読み込み）
   const [projectName, setProjectName] = useState(DEFAULT_PROJECT_NAME);
+
+  // ファイルシステムの階層構造を管理（ツリー表示用のデータ）
   const [filesystem, setFilesystem] = useState(() => [
     {
       id: "root",
@@ -26,36 +31,56 @@ export const useProjectTree = () => {
     },
   ]);
 
-  // 初期化状態を追跡
+  // 初期化が完了したかどうかを追跡（useEffectの重複実行を防ぐ）
   const isInitializedRef = useRef(false);
+
+  // 前回の展開状態を保持（新規展開ノードの検出に使用）
   const prevExpandedRef = useRef(new Set(["root"]));
 
-  // === 1階層分をツリーノードへ変換 ===
+  // フォルダクリック時に復元するため、直近の「ファイル選択」を保持
+  const lastFileSelectionRef = useRef(new Set());
+
+  // === ファイルシステム操作関数 ===
+
+  /**
+   * ファイルシステムのエントリーを1階層分だけツリーノードに変換
+   * @param {Array} entries - ファイルシステムのエントリー配列
+   * @param {string} parentPath - 親ディレクトリのパス
+   * @returns {Promise<Array>} 変換されたノード配列
+   */
   const mapOneLevelAsync = useCallback(async (entries, parentPath) => {
     const list = await Promise.all(
       (entries ?? []).map(async (e, index) => {
         const name = e?.name ?? "unknown";
+        // パスを結合（Tauriのjoin関数を使用）
         const fullPath = e?.path ?? (await join(parentPath ?? "", name));
+        // ユニークなIDを生成（パスベース）
         const id = String(fullPath ?? `${parentPath ?? ""}/${name}-${index}`);
         const isFile = e?.isFile === true;
 
         return {
-          id,
-          name,
-          path: fullPath,
-          parentPath: parentPath ?? null,
-          isFile,
-          isDirectory: !isFile,
+          id, // ノードの一意識別子
+          name, // 表示名（ファイル/フォルダ名）
+          path: fullPath, // フルパス
+          parentPath: parentPath ?? null, // 親ディレクトリのパス
+          isFile, // ファイルかどうか
+          isDirectory: !isFile, // ディレクトリかどうか
         };
       })
     );
     return list;
   }, []);
 
-  // === ツリーから id を探す ===
+  /**
+   * ツリーから指定されたIDのノードを検索
+   * @param {Array} nodes - 検索対象のノード配列
+   * @param {string} id - 検索するノードのID
+   * @returns {Object|null} 見つかったノードまたはnull
+   */
   const findNodeById = useCallback(function findNodeById(nodes, id) {
     for (const n of nodes) {
       if (n.id === id) return n;
+      // 子ノードがある場合は再帰的に検索
       if (n.children?.length) {
         const hit = findNodeById(n.children, id);
         if (hit) return hit;
@@ -64,55 +89,80 @@ export const useProjectTree = () => {
     return null;
   }, []);
 
-  // === 指定ノードの children を置換 ===
+  /**
+   * 指定されたIDのノードの子ノードを置換
+   * @param {Array} nodes - 対象のノード配列
+   * @param {string} id - 置換するノードのID
+   * @param {Array} children - 新しい子ノード配列
+   * @returns {Array} 更新されたノード配列
+   */
   const setChildrenById = useCallback(function setChildrenById(nodes, id, children) {
     return nodes.map((n) => {
       if (n.id === id) {
+        // 対象ノードの場合は子ノードを置換
         return { ...n, children };
       }
       if (n.children?.length) {
+        // 子ノードがある場合は再帰的に処理
         return { ...n, children: setChildrenById(n.children, id, children) };
       }
       return n;
     });
   }, []);
 
-  // === loadFilesystem関数をuseCallbackで定義（projectNameに依存しないように修正） ===
-  const loadFilesystem = useCallback(async (dirPath, currentProjectName) => {
-    try {
-      ConsoleMsg("info", `ルートディレクトリ読み込み開始: ${dirPath}`);
-      const entries = await readDir(dirPath);
-      const children = await mapOneLevelAsync(entries, dirPath);
+  // === 非同期読み込み関数 ===
 
-      setFilesystem([
-        {
-          id: "root",
-          name: currentProjectName || DEFAULT_PROJECT_NAME,
-          dirPath: dirPath,
-          path: dirPath,
-          isDirectory: true,
-          isFile: false,
-          children,
-        },
-      ]);
+  /**
+   * 指定されたディレクトリパスからファイルシステムを読み込み
+   * @param {string} dirPath - 読み込むディレクトリのパス
+   * @param {string} currentProjectName - 現在のプロジェクト名
+   */
+  const loadFilesystem = useCallback(
+    async (dirPath, currentProjectName) => {
+      try {
+        ConsoleMsg("info", `ルートディレクトリ読み込み開始: ${dirPath}`);
 
-      ConsoleMsg("info", `ルートディレクトリ読み込み完了: ${children.length} 件`);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      ConsoleMsg("error", `ルートディレクトリ読み込みエラー: ${msg}`);
-      setFilesystem([
-        {
-          id: "root",
-          name: currentProjectName || DEFAULT_PROJECT_NAME,
-          isDirectory: true,
-          isFile: false,
-          children: [],
-        },
-      ]);
-    }
-  }, [mapOneLevelAsync]);
+        // TauriのreadDir APIでディレクトリ内容を取得
+        const entries = await readDir(dirPath);
+        // 1階層分をツリーノードに変換
+        const children = await mapOneLevelAsync(entries, dirPath);
 
-  // === プロジェクト名を読み込む（単独で実行） ===
+        // ルートノードを含むファイルシステムツリーを設定
+        setFilesystem([
+          {
+            id: "root",
+            name: currentProjectName || DEFAULT_PROJECT_NAME,
+            dirPath: dirPath, // ディレクトリパスを保存
+            path: dirPath,
+            isDirectory: true,
+            isFile: false,
+            children, // 読み込んだ子ノード
+          },
+        ]);
+
+        ConsoleMsg("info", `ルートディレクトリ読み込み完了: ${children.length} 件`);
+      } catch (error) {
+        // エラー時は空のツリーを設定
+        const msg = error instanceof Error ? error.message : String(error);
+        ConsoleMsg("error", `ルートディレクトリ読み込みエラー: ${msg}`);
+        setFilesystem([
+          {
+            id: "root",
+            name: currentProjectName || DEFAULT_PROJECT_NAME,
+            isDirectory: true,
+            isFile: false,
+            children: [],
+          },
+        ]);
+      }
+    },
+    [mapOneLevelAsync]
+  );
+
+  /**
+   * 設定ファイルからプロジェクト名を読み込み
+   * @returns {Promise<string>} 読み込まれたプロジェクト名
+   */
   const loadProjectName = useCallback(async () => {
     try {
       const config = await loadStore();
@@ -127,7 +177,9 @@ export const useProjectTree = () => {
     }
   }, []);
 
-  // === 設定ファイルからディレクトリパスを取得してファイルシステムを読み込む ===
+  /**
+   * 設定ファイルからディレクトリパスを取得してファイルシステムを読み込み
+   */
   const loadFilesystemFromConfig = useCallback(async () => {
     try {
       const config = await loadStore();
@@ -135,6 +187,7 @@ export const useProjectTree = () => {
       const currentProjectName = config?.projectConfig?.name || DEFAULT_PROJECT_NAME;
 
       if (!dirPath) {
+        // パスが設定されていない場合は空のツリーを表示
         ConsoleMsg("info", "filepath未設定：空のツリーを表示");
         setFilesystem([
           {
@@ -148,12 +201,14 @@ export const useProjectTree = () => {
         return;
       }
 
-      // パスを正規化
+      // Windows形式のパス区切りを正規化
       dirPath = dirPath.replace(/\\/g, "/");
       ConsoleMsg("info", `設定から読み込んだパス: ${dirPath}`);
 
+      // ファイルシステムを読み込み
       await loadFilesystem(dirPath, currentProjectName);
     } catch (error) {
+      // エラー時は空のツリーを設定
       ConsoleMsg("error", `設定読み込みエラー: ${error?.message || error}`);
       setFilesystem([
         {
@@ -165,32 +220,39 @@ export const useProjectTree = () => {
         },
       ]);
     }
-  }, [loadFilesystem]); // loadFilesystemのみに依存
+  }, [loadFilesystem]);
 
-  // === 指定フォルダーの子を遅延ロード ===
+  /**
+   * 指定されたフォルダーの子ノードを遅延読み込み
+   * @param {string} nodeId - 読み込み対象のノードID
+   */
   const ensureChildrenLoaded = useCallback(
     async (nodeId) => {
       ConsoleMsg("debug", `ensureChildrenLoaded 開始: ${nodeId}`);
 
+      // 現在のファイルシステム状態を取得
       let currentFilesystem;
       setFilesystem((prev) => {
         currentFilesystem = prev;
         return prev;
       });
 
+      // 対象ノードを検索
       const target = findNodeById(currentFilesystem ?? [], nodeId);
 
-      // すでにロード済みまたはディレクトリでない場合はスキップ
+      // ノードが見つからない場合はスキップ
       if (!target) {
         ConsoleMsg("warn", `ノードが見つかりません: ${nodeId}`);
         return;
       }
 
+      // ディレクトリでない場合はスキップ
       if (!target.isDirectory) {
         ConsoleMsg("debug", `ファイルなのでスキップ: ${nodeId}`);
         return;
       }
 
+      // すでに読み込み済みの場合はスキップ
       if (target.children !== undefined) {
         ConsoleMsg("debug", `すでにロード済み: ${nodeId}`);
         return;
@@ -198,9 +260,12 @@ export const useProjectTree = () => {
 
       try {
         ConsoleMsg("info", `子を読み込み中: ${target.path}`);
+
+        // ディレクトリの内容を読み込み
         const entries = await readDir(target.path);
         const children = await mapOneLevelAsync(entries, target.path);
 
+        // ファイルシステムツリーを更新
         setFilesystem((prev) => setChildrenById(prev, nodeId, children));
         ConsoleMsg("info", `子の読み込み完了: ${target.path} -> ${children.length} 件`);
       } catch (error) {
@@ -212,9 +277,15 @@ export const useProjectTree = () => {
     [findNodeById, mapOneLevelAsync, setChildrenById]
   );
 
-  // === 展開状態変更ハンドラー ===
+  // === イベントハンドラー ===
+
+  /**
+   * ツリーノードの展開状態変更ハンドラー
+   * @param {Set|string} keys - 展開されているキーのSet
+   */
   const handleExpandedChange = useCallback(
     (keys) => {
+      // "all"の場合は何もしない
       if (keys === "all") return;
 
       const newKeys = keys instanceof Set ? keys : new Set(keys);
@@ -237,81 +308,147 @@ export const useProjectTree = () => {
         }
       });
 
-      // 状態を更新
+      // 展開状態を更新
       setExpandedKeys(newKeys);
       prevExpandedRef.current = newKeys;
     },
     [ensureChildrenLoaded]
   );
 
-  // === その他のハンドラー ===
-  const handleSelectionChange = useCallback((keys) => {
-    if (keys === "all") return;
-    setSelectedKeys(keys);
-    const firstKey = keys?.values?.().next?.().value;
-    if (firstKey) {
-      ConsoleMsg("info", `選択: ${firstKey}`);
-    }
-  }, []);
+  /**
+   * 選択変更ハンドラー (フォルダは選択しない / クリックでトグル展開のみ)
+   * 仕様:
+   *  - フォルダクリック: 展開/折りたたみ + 子遅延ロード (選択状態は変えない)
+   *  - ファイルクリック: 選択状態を更新
+   */
+  const handleSelectionChange = useCallback(
+    (keys) => {
+      if (keys === "all") return;
 
+      const firstKey = keys?.values?.().next?.().value;
+      if (!firstKey) return;
+
+      const node = findNodeById(filesystem, firstKey);
+      if (!node) return;
+
+      // ---- ディレクトリの場合: 選択を無効化し、展開トグルのみ ----
+      if (node.isDirectory) {
+        setExpandedKeys((prev) => {
+          const next = new Set(prev);
+          if (next.has(firstKey)) {
+            if (firstKey !== "root") next.delete(firstKey);
+          } else {
+            next.add(firstKey);
+            ensureChildrenLoaded(firstKey);
+          }
+          next.add("root");
+          prevExpandedRef.current = next;
+          return next;
+        });
+
+        // 選択状態は「最後に選んだファイル」に戻す (なければ空)
+        setSelectedKeys(() => new Set(lastFileSelectionRef.current));
+        return;
+      }
+
+      // ---- ファイルの場合: 通常の選択処理 ----
+      setSelectedKeys(keys);
+      lastFileSelectionRef.current = new Set(keys); // ファイル選択を記録
+    },
+    [filesystem, findNodeById, ensureChildrenLoaded]
+  );
+
+  /**
+   * ツリーノードのアクション（ダブルクリックなど）ハンドラー
+   * @param {string} key - アクションが実行されたノードのキー
+   */
   const handleAction = useCallback((key) => {
     ConsoleMsg("info", `アクション: ${key}`);
   }, []);
 
+  /**
+   * ツリーの更新ボタンのハンドラー
+   * プロジェクト名とファイルシステムを再読み込み
+   */
   const handleRefresh = useCallback(() => {
     ConsoleMsg("info", "ツリー更新");
-    // 同期的に実行して無限ループを防ぐ
+    // 非同期処理を順次実行（無限ループを防ぐため）
     loadProjectName().then(() => {
       loadFilesystemFromConfig();
     });
   }, [loadProjectName, loadFilesystemFromConfig]);
 
+  /**
+   * すべてのフォルダを折りたたむボタンのハンドラー
+   */
   const handleCollapseAll = useCallback(() => {
+    // ルートノードのみ展開状態にリセット
     setExpandedKeys(new Set(["root"]));
     prevExpandedRef.current = new Set(["root"]);
     ConsoleMsg("info", "すべて折りたたみ");
   }, []);
 
+  /**
+   * 新しいファイル作成ボタンのハンドラー
+   * TODO: 実装予定
+   */
   const handleNewFile = useCallback(() => {
     ConsoleMsg("info", "新しいファイル作成");
   }, []);
 
+  /**
+   * 新しいフォルダ作成ボタンのハンドラー
+   * TODO: 実装予定
+   */
   const handleNewFolder = useCallback(() => {
     ConsoleMsg("info", "新しいフォルダ作成");
   }, []);
 
-  // === 初期化（一度だけ実行） ===
+  // === 初期化処理 ===
+
+  /**
+   * コンポーネント初期化時に一度だけ実行される処理
+   * プロジェクト名とファイルシステムを読み込み
+   */
   useEffect(() => {
+    // 初期化フラグで重複実行を防ぐ
     if (isInitializedRef.current) return;
-    
+
     isInitializedRef.current = true;
     ConsoleMsg("info", "ProjectTree初期化開始");
-    
+
+    // 非同期初期化処理
     const initialize = async () => {
-      await loadProjectName();
-      await loadFilesystemFromConfig();
+      await loadProjectName(); // プロジェクト名を読み込み
+      await loadFilesystemFromConfig(); // ファイルシステムを読み込み
     };
-    
+
     initialize();
   }, []); // 空の依存配列で一度だけ実行
 
   // === 戻り値 ===
+  // カスタムフックが提供する状態とハンドラー関数
   return {
-    expandedKeys,
-    selectedKeys,
-    projectName,
-    filesystem,
-    handleSelectionChange,
-    handleExpandedChange,
-    handleAction,
-    handleRefresh,
-    handleCollapseAll,
-    handleNewFile,
-    handleNewFolder,
-    loadProjectName,
-    loadFilesystemFromConfig,
-    setFilesystem,
-    ensureChildrenLoaded,
-    loadFilesystem,
+    // 状態
+    expandedKeys, // 展開されているノードのキー
+    selectedKeys, // 選択されているノードのキー
+    projectName, // プロジェクト名
+    filesystem, // ファイルシステムツリー
+
+    // イベントハンドラー
+    handleSelectionChange, // 選択状態変更
+    handleExpandedChange, // 展開状態変更
+    handleAction, // ノードアクション
+    handleRefresh, // ツリー更新
+    handleCollapseAll, // 全折りたたみ
+    handleNewFile, // 新ファイル作成
+    handleNewFolder, // 新フォルダ作成
+
+    // ユーティリティ関数
+    loadProjectName, // プロジェクト名読み込み
+    loadFilesystemFromConfig, // 設定からファイルシステム読み込み
+    setFilesystem, // ファイルシステム直接設定
+    ensureChildrenLoaded, // 子ノード遅延読み込み
+    loadFilesystem, // ファイルシステム読み込み
   };
 };

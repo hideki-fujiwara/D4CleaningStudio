@@ -29,10 +29,10 @@ const TreeItemComponent = memo(function TreeItemComponent({ item, renderItem, to
           const showChevron = isDir;
 
           return (
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center space-x-2 ps-[calc(calc(var(--tree-item-level)_-_1)_*_1rem)]">
+            <div className="flex items-center justify-between py-0.5">
+              <div className="flex items-center space-x-1 ps-[calc(calc(var(--tree-item-level)_-_1)_*_1rem)]">
                 {showChevron ? (
-                  <Button slot="chevron" className={`${CHEVRON_STYLES.base} ${CHEVRON_STYLES.button} ${isExpanded ? "rotate-90" : ""}`}>
+                  <Button slot="chevron" className={`${CHEVRON_STYLES.base} ${CHEVRON_STYLES.button} tree-chevron-btn ${isExpanded ? "rotate-90" : ""}`}>
                     <div className="i-lucide-chevron-right w-4 h-4" />
                   </Button>
                 ) : (

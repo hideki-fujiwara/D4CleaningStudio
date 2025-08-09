@@ -29,5 +29,5 @@ export const CHEVRON_STYLES = {
   // 基本スタイル - サイズとアニメーション
   base: "shrink-0 w-6 h-6 transition-transform duration-200 inline-flex items-center justify-center",
   // ボタンスタイル - 背景とフォーカス状態
-  button: "bg-transparent border-0 cursor-default outline-none focus-visible:outline-2 focus-visible:outline-accent hover:bg-base-300 rounded",
+  button: "bg-transparent border-0 cursor-default outline-none focus-visible:outline-2 focus-visible:outline-accent rounded",
 };
