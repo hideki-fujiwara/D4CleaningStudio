@@ -120,16 +120,13 @@ function ProjectTree({ currentSize }) {
     <div className="h-full flex flex-col bg-base-100 rounded">
       {/* ヘッダー部分（左に余白追加） */}
       <div className="flex flex-col justify-center py-1 rounded px-2">
-        <h2
-          id="tree-heading"
-          className="shrink-0 text-sm py-1 font-semibold text-base-content"
-        >
+        <h2 id="tree-heading" className="shrink-0 text-sm py-1 font-semibold text-base-content">
           プロジェクト エキスプローラ
         </h2>
       </div>
 
       {/* ツリー表示エリア（メイン部分） */}
-      <div className="flex flex-col overflow-y-auto">
+      <div className="flex h-full flex-col overflow-y-auto">
         <Tree
           aria-label="プロジェクトファイルツリー"
           aria-labelledby="tree-heading" // ヘッダーとの関連付け

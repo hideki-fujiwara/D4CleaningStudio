@@ -12,11 +12,11 @@ export const INITIAL_EXPANDED_KEYS = ["root", "src"];
  * ツリーアイテムのスタイル定義
  */
 export const TREE_ITEM_STYLES = {
-  // 選択状態のスタイル
-  selected: "selected:bg-accent selected:text-accent-content",
   // 基本スタイル
   base: "text-base-content cursor-default group outline-none",
-  // フォーカス時のスタイル
+  // 選択状態のスタイル
+  selected: "selected:bg-base-300 selected:text-accent-content ",
+  // 基本スタイル
   focus: "focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2",
   // ホバー時のスタイル
   hover: "hover:bg-base-200",
