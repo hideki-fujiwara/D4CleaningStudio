@@ -430,25 +430,25 @@ export const useProjectTree = () => {
   // カスタムフックが提供する状態とハンドラー関数
   return {
     // 状態
-    expandedKeys, // 展開されているノードのキー
-    selectedKeys, // 選択されているノードのキー
-    projectName, // プロジェクト名
-    filesystem, // ファイルシステムツリー
-
-    // イベントハンドラー
-    handleSelectionChange, // 選択状態変更
-    handleExpandedChange, // 展開状態変更
-    handleAction, // ノードアクション
-    handleRefresh, // ツリー更新
-    handleCollapseAll, // 全折りたたみ
-    handleNewFile, // 新ファイル作成
-    handleNewFolder, // 新フォルダ作成
-
-    // ユーティリティ関数
-    loadProjectName, // プロジェクト名読み込み
-    loadFilesystemFromConfig, // 設定からファイルシステム読み込み
-    setFilesystem, // ファイルシステム直接設定
-    ensureChildrenLoaded, // 子ノード遅延読み込み
-    loadFilesystem, // ファイルシステム読み込み
+    expandedKeys,
+    selectedKeys,
+    projectName,
+    filesystem,
+    // ハンドラー
+    handleSelectionChange,
+    handleExpandedChange,
+    handleAction,
+    handleRefresh,
+    handleCollapseAll,
+    handleNewFile,
+    handleNewFolder,
+    // ユーティリティ
+    loadProjectName,
+    loadFilesystemFromConfig,
+    setFilesystem,
+    ensureChildrenLoaded,
+    loadFilesystem,
+    // 追加: 外部で展開状態を直接操作したいケース用
+    setExpandedKeys, // ← これを追加
   };
 };

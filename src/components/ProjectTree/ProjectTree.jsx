@@ -1,14 +1,11 @@
 // ========================================================================================
 // インポート
 // ========================================================================================
-import React, { useEffect, useCallback, memo } from "react";
+import React, { memo, useState, useRef, useCallback, useEffect } from "react";
 import { Tree } from "react-aria-components";
 import ConsoleMsg from "../../utils/ConsoleMsg";
 import { useProjectTree } from "./useProjectTree";
-import { useConfirmDialog } from "./useConfirmDialog";
-import ToolButton from "./ToolButton";
 import TreeItemComponent from "./TreeItemComponent";
-import ConfirmDialog from "./ConfirmDialog";
 
 // ========================================================================================
 // メインコンポーネント
@@ -24,75 +21,95 @@ import ConfirmDialog from "./ConfirmDialog";
  */
 function ProjectTree({ currentSize }) {
   // === カスタムフックからの状態とハンドラーを取得 ===
-  const {
-    expandedKeys, // 展開されているノード
-    selectedKeys, // 選択されているノード
-    projectName, // プロジェクト名
-    filesystem, // ファイルシステムのツリー
-    handleSelectionChange, // 選択変更ハンドラー
-    handleExpandedChange, // 展開状態変更ハンドラー
-    handleAction, // アクション実行ハンドラー
-    handleRefresh, // 更新ハンドラー
-    handleCollapseAll, // 全て折りたたみハンドラー
-    loadProjectName, // プロジェクト名読み込み
-    loadFilesystemFromConfig, // 設定からファイルシステム読み込み
-    setFilesystem, // ファイルシステム状態設定
-  } = useProjectTree();
+  const { expandedKeys, selectedKeys, filesystem, handleSelectionChange, handleExpandedChange, handleAction, handleRefresh, handleCollapseAll, setExpandedKeys } = useProjectTree();
 
-  // 確認ダイアログの状態とハンドラー
-  const { confirmDialog, showConfirmDialog, closeDialog, handleCancel } = useConfirmDialog();
+  // =========================
+  // コンテキストメニュー状態
+  // =========================
+  const [ctxMenu, setCtxMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    node: null, // { id, name, path, ... }
+  });
 
-  // === 初期化処理 ===
-  useEffect(() => {
-    let cancelled = false;
+  const containerRef = useRef(null);
 
-    // 非同期初期化処理
-    (async () => {
-      if (cancelled) return;
-      // プロジェクト名とファイルシステムを並行して読み込み
-      await Promise.all([loadProjectName(), loadFilesystemFromConfig()]);
-    })();
+  const closeContextMenu = useCallback(() => {
+    setCtxMenu((m) => (m.visible ? { ...m, visible: false, node: null } : m));
+  }, []);
 
-    // クリーンアップ：コンポーネントアンマウント時にキャンセル
-    return () => {
-      cancelled = true;
-    };
-  }, [loadProjectName, loadFilesystemFromConfig]);
+  // 右クリック呼び出し
+  const handleFolderContextMenu = useCallback((e, node) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-  // === プロジェクト名変更時の同期処理 ===
-  useEffect(() => {
-    setFilesystem((prev) => {
-      // 配列が空または無効な場合はそのまま返す
-      if (!Array.isArray(prev) || prev.length === 0) return prev;
+    // コンテナ基準の座標計算
+    const rect = containerRef.current?.getBoundingClientRect();
+    const x = rect ? e.clientX - rect.left : e.clientX;
+    const y = rect ? e.clientY - rect.top : e.clientY;
 
-      const root = prev[0];
-      // ルート以外またはすでに同じ名前の場合は変更不要
-      if (root?.id !== "root" || root?.name === projectName) return prev;
-
-      // ルートの名前のみ更新した新しい配列を返す
-      return [{ ...root, name: projectName }, ...prev.slice(1)];
+    ConsoleMsg("debug", "open menu", { id: node.id, name: node.name, x, y });
+    setCtxMenu({
+      visible: true,
+      x,
+      y,
+      node,
     });
-  }, [projectName, setFilesystem]);
-
-  // === ツールバーアクション ===
-
-  /**
-   * 新しいファイル作成ボタンのハンドラー
-   * 現在は PoC のためログ出力のみ
-   */
-  const handleNewFile = useCallback(() => {
-    ConsoleMsg("info", "新しいファイル作成");
-    // TODO: 実際のファイル作成処理を実装
   }, []);
 
-  /**
-   * 新しいフォルダ作成ボタンのハンドラー
-   * 現在は PoC のためログ出力のみ
-   */
-  const handleNewFolder = useCallback(() => {
-    ConsoleMsg("info", "新しいフォルダ作成");
-    // TODO: 実際のフォルダ作成処理を実装
-  }, []);
+  // 外側クリック / ESC で閉じる
+  useEffect(() => {
+    if (!ctxMenu.visible) return;
+    const onDown = (ev) => {
+      // メニュー内クリックはそのまま
+      if (ev.target.closest?.("[data-role='folder-menu']")) return;
+      closeContextMenu();
+    };
+    const onKey = (ev) => ev.key === "Escape" && closeContextMenu();
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [ctxMenu.visible, closeContextMenu]);
+
+  // メニューアクション（必要に応じて実装）
+  const menuAction = useCallback(
+    (type) => {
+      const node = ctxMenu.node;
+      if (!node) return;
+      switch (type) {
+        case "new-file":
+          // TODO
+          break;
+        case "new-folder":
+          // TODO
+          break;
+        case "refresh":
+          handleRefresh();
+          break;
+        case "collapse":
+          setExpandedKeys((prev) => {
+            const next = new Set(prev);
+            if (node.id !== "root") next.delete(node.id);
+            return next;
+          });
+          break;
+        case "rename":
+          // TODO
+          break;
+        case "delete":
+          // TODO
+          break;
+        default:
+          break;
+      }
+      closeContextMenu();
+    },
+    [ctxMenu.node, handleRefresh, setExpandedKeys, closeContextMenu]
+  );
 
   // === レンダリング関数 ===
 
@@ -101,32 +118,46 @@ function ProjectTree({ currentSize }) {
    * TreeItemComponent を使用して各アイテムを描画
    */
   const renderItem = useCallback(
-    function renderItem(item) {
-      // ツールバーハンドラーをまとめたオブジェクト
-      const toolbarHandlers = {
-        handleNewFile,
-        handleNewFolder,
-        handleRefresh,
-        handleCollapseAll,
-      };
-
-      return <TreeItemComponent item={item} renderItem={renderItem} toolbarHandlers={toolbarHandlers} />;
-    },
-    [handleNewFile, handleNewFolder, handleRefresh, handleCollapseAll]
+    (item) => (
+      <TreeItemComponent
+        item={item}
+        renderItem={renderItem}
+        toolbarHandlers={{
+          handleNewFile: () => menuAction("new-file"),
+          handleNewFolder: () => menuAction("new-folder"),
+          handleRefresh,
+          handleCollapseAll,
+        }}
+        onFolderContextMenu={handleFolderContextMenu}
+      />
+    ),
+    [handleFolderContextMenu, handleRefresh, handleCollapseAll, menuAction]
   );
 
   // === メインレンダリング ===
   return (
-    <div className="h-full flex flex-col bg-base-100 rounded">
+    <div
+      ref={containerRef}
+      className="h-full flex flex-col bg-base-100 relative"
+      onContextMenuCapture={(e) => {
+        // 既に子で stopPropagation 済みならここに来ない
+        if (e.defaultPrevented) return;
+        // フォルダ行以外の余白右クリック: メニュー閉じるのみ
+        if (!e.target.closest("[data-node-row]")) {
+          e.preventDefault();
+          closeContextMenu();
+        }
+      }}
+    >
       {/* ヘッダー部分（左に余白追加） */}
-      <div className="flex flex-col justify-center py-1 rounded px-2">
-        <h2 id="tree-heading" className="shrink-0 text-sm py-1 font-semibold text-base-content">
+      <div className="flex flex-col justify-center py-1 px-2 border-b">
+        <h2 id="tree-heading" className="text-sm font-semibold py-1">
           プロジェクト エキスプローラ
         </h2>
       </div>
 
       {/* ツリー表示エリア（メイン部分） */}
-      <div className="flex h-full flex-col overflow-y-auto">
+      <div className="flex flex-col overflow-y-auto">
         <Tree
           aria-label="プロジェクトファイルツリー"
           aria-labelledby="tree-heading" // ヘッダーとの関連付け
@@ -138,32 +169,41 @@ function ProjectTree({ currentSize }) {
           onSelectionChange={handleSelectionChange} // 選択変更時
           onExpandedChange={handleExpandedChange} // 展開変更時
           onAction={handleAction} // アクション実行時
-          className="border-separate border-spacing-0 w-full bg-base-100 overflow-auto rounded"
+          className="w-full bg-base-100"
         >
           {renderItem}
         </Tree>
       </div>
 
-      {/* フッター部分 */}
-      <div className="border-t border-base-200 p-2">
-        <div className="text-xs text-base-content/70 flex items-center space-x-1">
-          <div className="i-lucide-info w-3 h-3" />
-          <span>{selectedKeys.size > 0 ? `選択中: ${Array.from(selectedKeys).sort()[0]}` : "ファイルを選択してください"}</span>
+      {/* === コンテキストメニュー === */}
+      {ctxMenu.visible && (
+        <div data-role="folder-menu" className="absolute z-50 min-w-[180px] rounded border border-base-300 bg-base-100 shadow-lg py-1 text-sm" style={{ top: ctxMenu.y, left: ctxMenu.x }}>
+          <div className="px-3 py-1 text-xs text-base-content/60 border-b">{ctxMenu.node?.name}</div>
+          <button onClick={() => menuAction("new-file")} className="w-full text-left px-3 py-1 hover:bg-base-200">
+            新しいファイル
+          </button>
+          <button onClick={() => menuAction("new-folder")} className="w-full text-left px-3 py-1 hover:bg-base-200">
+            新しいフォルダ
+          </button>
+          <button onClick={() => menuAction("refresh")} className="w-full text-left px-3 py-1 hover:bg-base-200">
+            更新
+          </button>
+          <button onClick={() => menuAction("collapse")} className="w-full text-left px-3 py-1 hover:bg-base-200">
+            折りたたむ
+          </button>
+          <div className="h-px bg-base-300 my-1" />
+          <button onClick={() => menuAction("rename")} className="w-full text-left px-3 py-1 hover:bg-base-200">
+            名前変更
+          </button>
+          <button onClick={() => menuAction("delete")} className="w-full text-left px-3 py-1 hover:bg-error/20 text-error">
+            削除
+          </button>
+          <div className="h-px bg-base-300 my-1" />
+          <button onClick={closeContextMenu} className="w-full text-left px-3 py-1 hover:bg-base-200">
+            閉じる(Esc)
+          </button>
         </div>
-      </div>
-      {/* 確認ダイアログ */}
-      <ConfirmDialog
-        isOpen={confirmDialog.isOpen}
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            handleCancel();
-          }
-        }}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        onConfirm={confirmDialog.onConfirm}
-        onCancel={handleCancel}
-      />
+      )}
     </div>
   );
 }
