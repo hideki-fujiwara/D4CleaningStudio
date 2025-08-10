@@ -6,6 +6,7 @@ import { Tree } from "react-aria-components";
 import ConsoleMsg from "../../utils/ConsoleMsg";
 import { useProjectTree } from "./useProjectTree";
 import TreeItemComponent from "./TreeItemComponent";
+import FolderContextMenu from "./FolderContextMenu";
 
 // ========================================================================================
 // メインコンポーネント
@@ -175,35 +176,8 @@ function ProjectTree({ currentSize }) {
         </Tree>
       </div>
 
-      {/* === コンテキストメニュー === */}
-      {ctxMenu.visible && (
-        <div data-role="folder-menu" className="absolute z-50 min-w-[180px] rounded border border-base-300 bg-base-100 shadow-lg py-1 text-sm" style={{ top: ctxMenu.y, left: ctxMenu.x }}>
-          <div className="px-3 py-1 text-xs text-base-content/60 border-b">{ctxMenu.node?.name}</div>
-          <button onClick={() => menuAction("new-file")} className="w-full text-left px-3 py-1 hover:bg-base-200">
-            新しいファイル
-          </button>
-          <button onClick={() => menuAction("new-folder")} className="w-full text-left px-3 py-1 hover:bg-base-200">
-            新しいフォルダ
-          </button>
-          <button onClick={() => menuAction("refresh")} className="w-full text-left px-3 py-1 hover:bg-base-200">
-            更新
-          </button>
-          <button onClick={() => menuAction("collapse")} className="w-full text-left px-3 py-1 hover:bg-base-200">
-            折りたたむ
-          </button>
-          <div className="h-px bg-base-300 my-1" />
-          <button onClick={() => menuAction("rename")} className="w-full text-left px-3 py-1 hover:bg-base-200">
-            名前変更
-          </button>
-          <button onClick={() => menuAction("delete")} className="w-full text-left px-3 py-1 hover:bg-error/20 text-error">
-            削除
-          </button>
-          <div className="h-px bg-base-300 my-1" />
-          <button onClick={closeContextMenu} className="w-full text-left px-3 py-1 hover:bg-base-200">
-            閉じる(Esc)
-          </button>
-        </div>
-      )}
+      {/* === コンテキストメニュー（分離コンポーネント） === */}
+      <FolderContextMenu visible={ctxMenu.visible} x={ctxMenu.x} y={ctxMenu.y} node={ctxMenu.node} onAction={menuAction} onClose={closeContextMenu} />
     </div>
   );
 }

@@ -31,3 +31,22 @@ export const CHEVRON_STYLES = {
   // ボタンスタイル - 背景とフォーカス状態
   button: "bg-transparent border-0 cursor-default outline-none focus-visible:outline-2 focus-visible:outline-accent rounded",
 };
+
+/**
+ * フォルダ用コンテキストメニュー項目定義（順序保持）
+ * type: ハンドラーに渡す識別子
+ * label: 表示文字列
+ * danger: 強調（削除など）
+ * divider: "divider" 文字列で区切り
+ */
+export const FOLDER_CONTEXT_MENU_ITEMS = [
+  { type: "new-file",   label: "新しいファイル" },
+  { type: "new-folder", label: "新しいフォルダ" },
+  { type: "refresh",    label: "更新" },
+  { type: "collapse",   label: "折りたたむ" },
+  "divider",
+  { type: "rename",     label: "名前変更" },
+  { type: "delete",     label: "削除", danger: true },
+  "divider",
+  { type: "__close",    label: "閉じる" },
+];

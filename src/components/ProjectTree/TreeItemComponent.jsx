@@ -14,7 +14,7 @@ const TreeItemComponent = memo(function TreeItemComponent({ item, renderItem, to
       ? [
           {
             id: item.id + "__empty",
-            name: "（空）",
+            name: "（ 空 ）",
             isDirectory: false,
             isFile: true,
             isPlaceholder: true,
@@ -56,7 +56,7 @@ const TreeItemComponent = memo(function TreeItemComponent({ item, renderItem, to
                 onContextMenu={handleRowContextMenu}
               >
                 <div className="w-4 h-4 shrink-0" />
-                <span>（空）</span>
+                <span>（ 空 ）</span>
               </div>
             );
           }
