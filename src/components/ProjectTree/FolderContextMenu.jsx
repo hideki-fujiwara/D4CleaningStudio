@@ -78,7 +78,10 @@ export default function FolderContextMenu({ visible, x, y, node, onAction, onClo
       aria-label="フォルダ操作メニュー"
     >
       {/* タイトル行: 対象フォルダ名 */}
-      <div className="px-3 py-1 text-xs text-base-content truncate" title={node?.name}>
+      <div
+        className="px-3 py-1 text-xs text-base-content truncate"
+        title={node?.path || node?.name} // フルパスを表示、なければ名前
+      >
         {node?.name || "(folder)"}
       </div>
       <div className="h-px bg-base-300 my-1" />

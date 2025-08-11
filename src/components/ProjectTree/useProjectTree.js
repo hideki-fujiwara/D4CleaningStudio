@@ -31,6 +31,12 @@ export const useProjectTree = () => {
     },
   ]);
 
+  // 読み込み中かどうかを管理
+  const [loading, setLoading] = useState(false);
+
+  // エラーメッセージ
+  const [error, setError] = useState(null);
+
   // 初期化が完了したかどうかを追跡（useEffectの重複実行を防ぐ）
   const isInitializedRef = useRef(false);
 
@@ -120,6 +126,8 @@ export const useProjectTree = () => {
   const loadFilesystem = useCallback(
     async (dirPath, currentProjectName) => {
       try {
+        setLoading(true);
+        setError(null);
         ConsoleMsg("info", `ルートディレクトリ読み込み開始: ${dirPath}`);
 
         // TauriのreadDir APIでディレクトリ内容を取得
@@ -154,6 +162,8 @@ export const useProjectTree = () => {
             children: [],
           },
         ]);
+      } finally {
+        setLoading(false);
       }
     },
     [mapOneLevelAsync]
@@ -434,6 +444,8 @@ export const useProjectTree = () => {
     selectedKeys,
     projectName,
     filesystem,
+    loading,
+    error,
     // ハンドラー
     handleSelectionChange,
     handleExpandedChange,

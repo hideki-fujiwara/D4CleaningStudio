@@ -156,7 +156,7 @@ const TreeItemComponent = memo(function TreeItemComponent({ item, renderItem, to
                   {/* ファイル・フォルダ名（長い場合は省略表示） */}
                   <div
                     className="text-sm whitespace-nowrap overflow-hidden text-ellipsis min-w-0"
-                    title={item.name} // ホバー時に完全名を表示
+                    title={item.path || item.name} // ホバー時にフルパスを表示
                   >
                     {item.name}
                   </div>
