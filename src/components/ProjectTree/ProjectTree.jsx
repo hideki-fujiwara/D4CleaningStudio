@@ -44,17 +44,11 @@ function ProjectTree({ currentSize }) {
   const handleFolderContextMenu = useCallback((e, node) => {
     e.preventDefault();
     e.stopPropagation();
-
-    // コンテナ基準の座標計算
-    const rect = containerRef.current?.getBoundingClientRect();
-    const x = rect ? e.clientX - rect.left : e.clientX;
-    const y = rect ? e.clientY - rect.top : e.clientY;
-
-    ConsoleMsg("debug", "open menu", { id: node.id, name: node.name, x, y });
+    // Portal で fixed を使うのでスクリーン座標を直接使う
     setCtxMenu({
       visible: true,
-      x,
-      y,
+      x: e.clientX,
+      y: e.clientY,
       node,
     });
   }, []);
@@ -151,25 +145,25 @@ function ProjectTree({ currentSize }) {
       }}
     >
       {/* ヘッダー部分（左に余白追加） */}
-      <div className="flex flex-col justify-center py-1 px-2 border-b">
+      <div className="flex flex-col justify-center py-1 px-1">
         <h2 id="tree-heading" className="text-sm font-semibold py-1">
           プロジェクト エキスプローラ
         </h2>
       </div>
 
       {/* ツリー表示エリア（メイン部分） */}
-      <div className="flex flex-col overflow-y-auto">
+      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
         <Tree
           aria-label="プロジェクトファイルツリー"
-          aria-labelledby="tree-heading" // ヘッダーとの関連付け
-          selectionMode="single" // 単一選択モード
-          selectionBehavior="replace" // 選択時は置換
-          items={filesystem} // ツリーのデータ
-          selectedKeys={selectedKeys} // 選択状態
-          expandedKeys={expandedKeys} // 展開状態
-          onSelectionChange={handleSelectionChange} // 選択変更時
-          onExpandedChange={handleExpandedChange} // 展開変更時
-          onAction={handleAction} // アクション実行時
+          aria-labelledby="tree-heading"
+          selectionMode="single"
+          selectionBehavior="replace"
+          items={filesystem}
+          selectedKeys={selectedKeys}
+          expandedKeys={expandedKeys}
+          onSelectionChange={handleSelectionChange}
+          onExpandedChange={handleExpandedChange}
+          onAction={handleAction}
           className="w-full bg-base-100"
         >
           {renderItem}
