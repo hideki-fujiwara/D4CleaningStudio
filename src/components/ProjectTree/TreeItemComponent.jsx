@@ -147,8 +147,8 @@ const TreeItemComponent = memo(function TreeItemComponent({ item, renderItem, to
                     className={`w-4 h-4 ${
                       isDir
                         ? isExpanded
-                          ? "i-lucide-folder-open"
-                          : "i-lucide-folder" // フォルダ: 開閉状態で切替
+                          ? "i-vscode-icons-default-folder-opened"
+                          : "i-vscode-icons-default-folder" // フォルダ: 開閉状態で切替
                         : getFileIcon(item.name) // ファイル: 拡張子に応じたアイコン
                     }`}
                   />

@@ -27,6 +27,7 @@ export const FILE_ICON_MAP = {
   yml: "i-lucide-list text-red-500", // YAML (短縮形)
   toml: "i-lucide-file-key text-orange-400", // TOML
   csv: "i-lucide-sheet text-green-600", // CSV
+  tsv: "i-lucide-table text-blue-600", // TSV
 
   // ドキュメント関連
   md: "i-lucide-book-open text-blue-600", // Markdown
