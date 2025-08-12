@@ -38,24 +38,24 @@ function WindowsTitlebar() {
       <div className="flex-none">
         {/* 最小化ボタン */}
         <Button
-          className="inline-flex h-10 w-10 shrink-0 cursor-pointer flex-nowrap items-center justify-center gap-2.5 rounded-md bg-base-200 text-center align-middle outline-0 hover:bg-base-300"
+          className="inline-flex h-10 w-10 shrink-0 cursor-pointer flex-nowrap items-center justify-center gap-2.5 rounded-md bg-base-200 text-center align-middle outline-0 transition-all duration-150 hover:bg-base-300 active:scale-95 active:bg-base-100"
           onClick={() => window_minimize()}
         >
-          <span className="i-mdi-window-minimize h-6 w-6 text-base-content"></span>
+          <span className="i-mdi-window-minimize h-6 w-6 text-base-content transition-transform duration-150"></span>
         </Button>
         {/* 最大化/元に戻すボタン */}
         <Button
-          className="inline-flex h-10 w-10 shrink-0 cursor-pointer flex-nowrap items-center justify-center gap-2.5 rounded-md bg-base-200 text-center align-middle outline-0 hover:bg-base-300"
+          className="inline-flex h-10 w-10 shrink-0 cursor-pointer flex-nowrap items-center justify-center gap-2.5 rounded-md bg-base-200 text-center align-middle outline-0 transition-all duration-150 hover:bg-base-300 active:scale-95 active:bg-base-100"
           onClick={() => window_maximize()}
         >
-          <span className="i-mdi-window-maximize h-6 w-6 text-base-content"></span>
+          <span className="i-mdi-window-maximize h-6 w-6 text-base-content transition-transform duration-150"></span>
         </Button>
         {/* 閉じるボタン */}
         <Button
-          className="inline-flex h-10 w-10 shrink-0 cursor-pointer flex-nowrap items-center justify-center gap-2.5 rounded-md bg-base-200 text-center align-middle outline-0 hover:bg-error"
+          className="inline-flex h-10 w-10 shrink-0 cursor-pointer flex-nowrap items-center justify-center gap-2.5 rounded-md bg-base-200 text-center align-middle outline-0 transition-all duration-150 hover:bg-error active:scale-95 active:bg-red-600"
           onClick={() => window_close()}
         >
-          <span className="i-mdi-close h-6 w-6 text-base-content"></span>
+          <span className="i-mdi-close h-6 w-6 text-base-content transition-transform duration-150"></span>
         </Button>
       </div>
     </div>
