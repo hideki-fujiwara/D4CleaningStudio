@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "./App.css";
 import ConsoleMsg from "./utils/ConsoleMsg";
-import { loadStore, saveStore } from "./utils/StoreManager";
+import { loadStore, saveStore, getProjectConfig } from "./utils/StoreManager";
 import { increaseFontSize, decreaseFontSize, resetFontSize, restoreFontSize } from "./utils/fontSizeManager";
 import WindowTitlebar from "./components/WindowTitlebar/windowTitlebar";
 import MainContent from "./components/MainContent/mainContent";
 import Statusbar from "./components/Statusbar/statusbar";
-import ProjectInfoDialog from "./components/ProjectInfoDialog/ProjectInfoDialog";
+import NewProjectDialog from "./components/Dialog/NewProjectDialog";
 
 /**
  * アプリケーションのメインコンポーネント
@@ -22,7 +22,7 @@ function App() {
     windowConfig: {},
     windowState: {},
   });
-  const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
 
   // ========================================================================================
   // キーボードイベントハンドラー
@@ -77,7 +77,7 @@ function App() {
 
         if (!cfg.projectConfig?.name?.trim()) {
           ConsoleMsg("info", "プロジェクト情報が空白のため、入力ダイアログを表示します");
-          setShowProjectDialog(true);
+          setShowNewProjectDialog(true);
         }
       } catch (error) {
         ConsoleMsg("error", "アプリケーション初期化に失敗しました", error);
@@ -115,7 +115,7 @@ function App() {
       } catch (error) {
         ConsoleMsg("error", `ストア保存エラー: ${error}`);
       } finally {
-        setShowProjectDialog(false);
+        setShowProjectInfoDialog(false);
       }
     },
     [config]
@@ -141,12 +141,7 @@ function App() {
 
       {/* プロジェクト情報入力ダイアログ - アプリ全体にオーバーレイ */}
       {/* 条件レンダリング：showProjectDialogがtrueの場合のみ表示 */}
-      {showProjectDialog && (
-        <ProjectInfoDialog
-          onClose={() => setShowProjectDialog(false)} // ダイアログを閉じる処理
-          onSave={handleSaveProject} // プロジェクト情報保存処理
-        />
-      )}
+      {showNewProjectDialog && <NewProjectDialog isOpen={showNewProjectDialog} onClose={() => setShowNewProjectDialog(false)} />}
     </div>
   );
 }

@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { Menu, MenuItem, MenuTrigger, Button, Popover, SubmenuTrigger, Separator } from "react-aria-components";
+import { mkdir, writeTextFile } from "@tauri-apps/plugin-fs";
+import { join } from "@tauri-apps/api/path";
 import ConsoleMsg from "../../utils/ConsoleMsg";
+import NewProjectDialog from "../Dialog/NewProjectDialog";
+
 // メニュー項目の定義
 const menuItems = {
   file: [
@@ -93,6 +97,14 @@ function AppMenu() {
         ConsoleMsg("info", "プロジェクト新規作成メニューが選択されました");
         setIsNewProjectDialogOpen(true);
         break;
+      case "open":
+        ConsoleMsg("info", "プロジェクトを開くメニューが選択されました");
+        // TODO: プロジェクトを開く処理
+        break;
+      case "save":
+        ConsoleMsg("info", "プロジェクト保存メニューが選択されました");
+        // TODO: プロジェクト保存処理
+        break;
       // 他のメニュー項目のハンドリング
       default:
         ConsoleMsg("debug", `未処理のメニュー項目: ${itemId}`);
@@ -103,10 +115,48 @@ function AppMenu() {
   const handleCreateProject = async (projectData) => {
     try {
       ConsoleMsg("info", "プロジェクト作成開始");
-      // TODO: プロジェクト作成の実装
-      ConsoleMsg("info", `プロジェクト "${projectData.name}" を作成しました`);
+
+      // プロジェクトフォルダのパスを作成
+      const projectPath = await join(projectData.location, projectData.name);
+
+      // プロジェクトフォルダを作成
+      await mkdir(projectPath, { recursive: true });
+      ConsoleMsg("info", `プロジェクトフォルダ作成: ${projectPath}`);
+
+      // プロジェクト設定ファイルを作成
+      const projectConfig = {
+        name: projectData.name,
+        description: projectData.description,
+        createdAt: new Date().toISOString(),
+        version: "1.0.0",
+        type: "D4CleaningStudio",
+        settings: {
+          // デフォルト設定
+        },
+      };
+
+      const configPath = await join(projectPath, "project.json");
+      await writeTextFile(configPath, JSON.stringify(projectConfig, null, 2));
+      ConsoleMsg("info", `プロジェクト設定ファイル作成: ${configPath}`);
+
+      // srcフォルダを作成
+      const srcPath = await join(projectPath, "src");
+      await mkdir(srcPath, { recursive: true });
+
+      // dataフォルダを作成
+      const dataPath = await join(projectPath, "data");
+      await mkdir(dataPath, { recursive: true });
+
+      // outputフォルダを作成
+      const outputPath = await join(projectPath, "output");
+      await mkdir(outputPath, { recursive: true });
+
+      ConsoleMsg("success", `プロジェクト "${projectData.name}" を作成しました`);
+      ConsoleMsg("info", `プロジェクトパス: ${projectPath}`);
+
+      // TODO: 作成したプロジェクトを開く処理
     } catch (error) {
-      ConsoleMsg("error", `プロジェクト作成エラー: ${error}`);
+      ConsoleMsg("error", `プロジェクト作成エラー: ${error.message}`);
     }
   };
 
@@ -151,6 +201,9 @@ function AppMenu() {
           </MenuTrigger>
         </div>
       </div>
+
+      {/* 新規プロジェクト作成ダイアログ */}
+      <NewProjectDialog isOpen={isNewProjectDialogOpen} onClose={() => setIsNewProjectDialogOpen(false)} onCreateProject={handleCreateProject} />
     </>
   );
 }

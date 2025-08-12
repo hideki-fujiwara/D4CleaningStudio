@@ -28,14 +28,30 @@
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
     { "identifier": "fs:allow-exists", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-fstat", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-ftruncate", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-mkdir", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-lstat", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-size", "allow": [{ "path": "**" }] },
 
+    { "identifier": "fs:allow-open", "allow": [{ "path": "**" }] },
     { "identifier": "fs:allow-read", "allow": [{ "path": "**" }] },
     { "identifier": "fs:allow-read-dir", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-read-file", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-read-text-file", "allow": [{ "path": "**" }] },
 
     { "identifier": "fs:allow-create", "allow": [{ "path": "**" }] },
     { "identifier": "fs:allow-write", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-write-file", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:allow-write-text-file", "allow": [{ "path": "**" }] },
 
+    { "identifier": "fs:allow-copy-file", "allow": [{ "path": "**" }] },
     { "identifier": "fs:allow-remove", "allow": [{ "path": "**" }] },
-    { "identifier": "fs:allow-rename", "allow": [{ "path": "**" }] }
+    { "identifier": "fs:allow-rename", "allow": [{ "path": "**" }] },
+
+    { "identifier": "fs:read-meta", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:read-dirs", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:read-all", "allow": [{ "path": "**" }] },
+    { "identifier": "fs:write-all", "allow": [{ "path": "**" }] }
   ]
 }
