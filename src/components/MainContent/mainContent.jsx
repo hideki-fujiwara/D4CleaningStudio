@@ -6,6 +6,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import ConsoleMsg from "../../utils/ConsoleMsg";
 import { loadMainPanelLayout, saveMainPanelLayout } from "../../utils/StoreManager";
 import ProjectTree from "../ProjectTree/ProjectTree";
+import FlowEditor from "../FlowEditor/FlowEditor";
 
 /**
  * メインコンテンツコンポーネント
@@ -13,6 +14,7 @@ import ProjectTree from "../ProjectTree/ProjectTree";
  * アプリケーションのメイン作業領域を提供する。
  * 3列（左サイドバー、中央メイン、右サイドバー）のレイアウトで、
  * 中央は上下2段に分割されている。
+ * 中央上パネルにReact Flowエディタを配置。
  *
  * パネルサイズは react-resizable-panels を使用してリサイズ可能で、
  * レイアウト状態は自動的にストアに保存・復元される。
@@ -20,8 +22,9 @@ import ProjectTree from "../ProjectTree/ProjectTree";
  * レイアウト構成:
  * ┌─────┬─────────────┬─────┐
  * │ 左  │   中央上     │ 右  │
- * │サイド├─────────────┤サイド│
- * │バー │   中央下     │バー │
+ * │サイド│ (FlowEditor) │サイド│
+ * │バー ├─────────────┤バー │
+ * │     │   中央下     │     │
  * │     │  (ログ表示)   │     │
  * └─────┴─────────────┴─────┘
  */
@@ -33,11 +36,11 @@ function MainContent() {
   /**
    * デフォルトのレイアウト比率
    * - horizontal: [左%, 中央%, 右%] = [10%, 80%, 10%]
-   * - vertical: [上%, 下%] = [40%, 60%]
+   * - vertical: [上%, 下%] = [70%, 30%] (FlowEditor用に上部を広く)
    */
   const defaultLayout = {
     horizontal: [10, 80, 10], // 水平方向の分割比率
-    vertical: [40, 60], // 垂直方向の分割比率（中央パネル内）
+    vertical: [70, 30], // 垂直方向の分割比率（中央パネル内）
   };
 
   // ========================================================================================
@@ -208,7 +211,7 @@ function MainContent() {
         {/* 中央パネル（上下に分割される親パネル） */}
         {/* ======================================================================================== */}
 
-        <Panel ref={centerPanelRef} className="overflow-auto">
+        <Panel ref={centerPanelRef} className="overflow-hidden">
           {/* 垂直方向のパネルグループ（上下2段レイアウト） */}
           <PanelGroup
             direction="vertical"
@@ -216,16 +219,11 @@ function MainContent() {
             className="h-full"
           >
             {/* ======================================================================================== */}
-            {/* 中央上パネル（メインワークエリア） */}
+            {/* 中央上パネル（FlowEditorエリア） */}
             {/* ======================================================================================== */}
 
-            <Panel ref={centerUpPanelRef} className="overflow-auto">
-              <div className="h-full p-4 text-base-content">
-                {/* メインコンテンツエリア */}
-                中央パネルコンテンツ
-                {/* デバッグ情報: 現在のサイズ表示 */}
-                <p className="mt-4 text-accent">現在のサイズ: {verticalLayout[0].toFixed(2)}%</p>
-              </div>
+            <Panel ref={centerUpPanelRef} className="overflow-hidden">
+              <FlowEditor />
             </Panel>
 
             {/* 中央上パネルと中央下パネルの境界線 */}
@@ -252,8 +250,9 @@ function MainContent() {
                 <div className="h-[calc(100%-2.5rem)] overflow-y-auto">
                   <div className="space-y-1 text-sm">
                     {/* サンプルログエントリ（実際の実装では動的に生成） */}
-                    <div className="text-info">[INFO] アプリケーションを起動しました</div>
-                    <div className="text-success">[SUCCESS] 設定を読み込みました</div>
+                    <div className="text-info">[INFO] FlowEditorを初期化しました</div>
+                    <div className="text-success">[SUCCESS] React Flowコンポーネントを読み込みました</div>
+                    <div className="text-info">[INFO] 設定を読み込みました</div>
                     <div className="text-warning">[WARNING] 一部の設定が見つかりません</div>
                     <div className="text-error">[ERROR] ファイルの読み込みに失敗しました</div>
                   </div>
@@ -279,9 +278,11 @@ function MainContent() {
         >
           <div className="h-full p-4 text-base-content">
             {/* 右サイドバーのコンテンツ */}
-            右パネルサイドバー
-            {/* デバッグ情報: 現在のサイズ表示 */}
-            <p className="mt-4 text-accent">現在のサイズ: {horizontalLayout[2].toFixed(2)}%</p>
+            <h3 className="mb-4 text-lg font-semibold">フロー情報</h3>
+            <div className="space-y-2 text-sm">
+              <div>パネルサイズ: {horizontalLayout[2].toFixed(2)}%</div>
+              <div>FlowEditorが稼働中</div>
+            </div>
           </div>
         </Panel>
       </PanelGroup>
