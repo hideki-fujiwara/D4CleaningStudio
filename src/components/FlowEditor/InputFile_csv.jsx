@@ -1,27 +1,28 @@
-import React, { memo, useState, useCallback } from "react";
+import React, { memo, useState, useCallback, useEffect } from "react";
 import { Handle, Position, NodeResizer } from "reactflow";
 
 /**
- * データベースシリンダーアイコン（画像のようなスタイル）
+ * データベースシリンダーアイコン（SVG）
  */
-const DatabaseCylinderIcon = ({ size = 150, color = "#ffffff", stroke = "#ffffff", className = "" }) => (
-  <svg width={size} height={size * 0.8} viewBox="0 0 100 76" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+const DatabaseCylinderIcon = ({ size = 160, color = "#ffffff", stroke = "#ffffff", filename = "FILE名", className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 76 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     {/* シリンダーの上面（楕円） */}
-    <ellipse cx="50" cy="12" rx="35" ry="10" fill={color} stroke="none" />
+    <ellipse cx="38" cy="12" rx="35" ry="10" fill={color} stroke="none" />
     {/* シリンダーの底面 */}
-    <ellipse cx="50" cy="67" rx="35" ry="10" fill={color} stroke="none" strokeWidth="1.5" />
-    <ellipse cx="50" cy="67" rx="35" ry="10" fill="none" stroke={stroke} strokeWidth="1.5" opacity="1" />
+    <ellipse cx="38" cy="67" rx="35" ry="10" fill={color} stroke="none" strokeWidth="1.5" />
+    <ellipse cx="38" cy="67" rx="35" ry="10" fill="none" stroke={stroke} strokeWidth="1.5" opacity="1" />
     {/* シリンダーの面 */}
-    <rect x="15" y="12" width="70" height="55" fill={color} stroke="none" />
+    <rect x="2" y="12" width="72" height="55" fill={color} stroke="none" />
     {/* シリンダーの左側面(線) */}
-    <rect x="14" y="12" width="1.5" height="55" fill={stroke} />
+    <rect x="2" y="12" width="1" height="55" fill={stroke} />
     {/* シリンダーの右側面（線） */}
-    <rect x="84" y="12" width="1.5" height="55" fill={stroke} />
+    <rect x="73" y="12" width="1" height="55" fill={stroke} />
     {/* シリンダーの（ハイライト） */}
-    <ellipse cx="50" cy="12" rx="35" ry="10" fill="none" stroke={stroke} strokeWidth="1.5" opacity="1" />
+    <ellipse cx="38" cy="12" rx="35" ry="10" fill="none" stroke={stroke} strokeWidth="1.5" opacity="1" />
     {/* ファイル名ラベル（シリンダー内部） */}
-    <text x="50" y="42" textAnchor="middle" fontSize="8" fill="white" fontFamily="Arial, sans-serif" fontWeight="bold">
-      ファイル名
+    <text x="38" y="42" textAnchor="middle" fontSize="8" fill="white" fontFamily="Arial, sans-serif" fontWeight="bold">
+      {/* ファイル名がここに表示される */}
+      {filename}
     </text>
   </svg>
 );
@@ -30,11 +31,30 @@ const DatabaseCylinderIcon = ({ size = 150, color = "#ffffff", stroke = "#ffffff
  * CSV入力ファイルノードコンポーネント（シンプル版）
  */
 const InputFile_csv = memo(({ data, isConnectable, selected }) => {
-  // ノードのサイズ状態
-  const [nodeSize, setNodeSize] = useState({
-    width: data.width || 180,
-    height: data.height || 150, // 4:3の比率を維持
-  });
+  // 比率計算関数
+  const calculateSize = useCallback((width, height) => {
+    const aspectRatio = 76 / 80; // シリンダーの実際の比率
+    let newWidth = width;
+    let newHeight = height;
+
+    // 初期値も比率に合わせて調整
+    if (newWidth / newHeight > aspectRatio) {
+      newWidth = newHeight * aspectRatio;
+    } else {
+      newHeight = newWidth / aspectRatio;
+    }
+
+    return {
+      width: Math.max(Math.round(newWidth), 100), // 最小幅100px
+      height: Math.max(Math.round(newHeight), 105), // 最小高さ105px
+    };
+  }, []);
+
+  // 初期サイズも比率計算を通す
+  const initialSize = calculateSize(data.width || 160, data.height || 120);
+
+  // ノードのサイズ状態（シリンダーの形状に合わせて調整）
+  const [nodeSize, setNodeSize] = useState(initialSize);
 
   // デフォルトスタイル
   const defaultStyle = {
@@ -42,43 +62,55 @@ const InputFile_csv = memo(({ data, isConnectable, selected }) => {
       enabled: true,
       color: "#14b8a6",
       handleSize: 6,
-      lineWidth: 1,
-      lineStyle: "solid",
+      lineWidth: 1.5,
+      lineStyle: "dashed",
     },
   };
 
   const style = { ...defaultStyle, ...data.style };
   const resizerStyle = { ...defaultStyle.resizer, ...style.resizer };
 
-  // リサイズハンドラー
+  // リサイズハンドラー（シリンダーの比率76:80に合わせる）
   const onResize = useCallback(
     (event, params) => {
-      // 4:3の比率を維持
-      const aspectRatio = 4 / 3;
+      const aspectRatio = 76 / 80; // シリンダーの実際の比率
       let newWidth = params.width;
       let newHeight = params.height;
 
-      if (newWidth / newHeight > aspectRatio) {
-        newWidth = newHeight * aspectRatio;
-      } else {
+      // リサイズの主導権を判定
+      const widthDriven = Math.abs(params.width - nodeSize.width) > Math.abs(params.height - nodeSize.height);
+
+      if (widthDriven) {
+        // 幅主導の場合
         newHeight = newWidth / aspectRatio;
+      } else {
+        // 高さ主導の場合
+        newWidth = newHeight * aspectRatio;
       }
 
       setNodeSize({
-        width: newWidth,
-        height: newHeight,
+        width: Math.max(Math.round(newWidth), 100), // 最小幅100px
+        height: Math.max(Math.round(newHeight), 105), // 最小高さ105px
       });
     },
-    [setNodeSize]
+    [setNodeSize, nodeSize.width, nodeSize.height]
   );
 
+  // data.widthやdata.heightが変更された時も比率計算を適用
+  useEffect(() => {
+    if (data.width || data.height) {
+      const newSize = calculateSize(data.width || nodeSize.width, data.height || nodeSize.height);
+      setNodeSize(newSize);
+    }
+  }, [data.width, data.height, calculateSize]);
+
   return (
-    <div className="input-file-csv-node relative" style={{ width: nodeSize.width, height: nodeSize.height }}>
+    <div className="relative" style={{ width: nodeSize.width, height: nodeSize.height }}>
       {/* リサイザー */}
       {selected && resizerStyle.enabled && (
         <NodeResizer
-          minWidth={120}
-          minHeight={96}
+          minWidth={100}
+          minHeight={105}
           onResize={onResize}
           color={resizerStyle.color}
           handleStyle={{
@@ -97,20 +129,25 @@ const InputFile_csv = memo(({ data, isConnectable, selected }) => {
       )}
 
       {/* メインコンテンツ - データベースシリンダーのみ */}
-      <div className="w-full h-full flex items-center justify-start pl-2">
-        <DatabaseCylinderIcon size={nodeSize.width} color={data.color || ""} />
+      <div className="w-full h-full flex items-center justify-center p-1">
+        <DatabaseCylinderIcon size={Math.min(nodeSize.width, nodeSize.height)} color={data.color || "#14b8a6"} stroke={data.stroke || "#ffffff"} filename={data.filename || "FILE名"} />
       </div>
 
-      {/* 右中央の出力ハンドル（データ出力用） - 隙間を最小化 */}
+      {/* 右中央の出力ハンドル（データ出力用） */}
       <Handle
         type="source"
         position={Position.Right}
         isConnectable={isConnectable}
-        className="w-3 h-3 bg-teal-600 hover:bg-teal-700 transition-colors border-2 border-white rounded-full"
         style={{
           top: "50%",
           transform: "translateY(-50%)",
-          right: "-1px", // 隙間を大幅に削減
+          right: "1%",
+          width: "12px",
+          height: "12px",
+          backgroundColor: "#ffffff",
+          border: "2px solid white",
+          borderRadius: "2px", // 四角形（少し角丸）
+          boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
         }}
       />
 
@@ -119,11 +156,16 @@ const InputFile_csv = memo(({ data, isConnectable, selected }) => {
         type="target"
         position={Position.Left}
         isConnectable={isConnectable}
-        className="w-2 h-2 bg-gray-500 hover:bg-gray-600 transition-colors border border-white rounded-full"
         style={{
           top: "50%",
           transform: "translateY(-50%)",
-          left: "-1px", // 隙間を削減
+          left: "1%",
+          width: "12px",
+          height: "12px",
+          backgroundColor: "#ffffff",
+          border: "2px solid white",
+          borderRadius: "2px", // 四角形（少し角丸）
+          boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
         }}
       />
     </div>
