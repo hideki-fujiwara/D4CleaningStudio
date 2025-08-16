@@ -5,46 +5,51 @@ import React, { memo, useState, useRef, useCallback, useEffect } from "react";
 import { Tree } from "react-aria-components";
 import ConsoleMsg from "../../utils/ConsoleMsg";
 import { useProjectTree } from "./useProjectTree";
+import { useTreeDrop } from "./useDragAndDrop";
+import { DROP_ZONE_STYLES, CONTEXT_MENU_ACTIONS } from "./constants";
 import TreeItemComponent from "./TreeItemComponent";
 import FolderContextMenu from "./FolderContextMenu";
 
-// ========================================================================================
-// メインコンポーネント
-// ========================================================================================
-
 /**
  * プロジェクトエキスプローラのメインコンポーネント
- * ファイルツリーの表示、ツールバー、各種操作を提供
- *
- * @param {Object} props - コンポーネントのプロパティ
- * @param {number} props.currentSize - 現在のサイズ（パーセンテージ）
- * @returns {JSX.Element} プロジェクトエキスプローラのJSX要素
  */
 function ProjectTree({ currentSize }) {
-  // === カスタムフックからの状態とハンドラーを取得 ===
+  // カスタムフックからの状態とハンドラー
   const { expandedKeys, selectedKeys, filesystem, handleSelectionChange, handleExpandedChange, handleAction, handleRefresh, handleCollapseAll, setExpandedKeys } = useProjectTree();
 
-  // =========================
   // コンテキストメニュー状態
-  // =========================
   const [ctxMenu, setCtxMenu] = useState({
     visible: false,
     x: 0,
     y: 0,
-    node: null, // { id, name, path, ... }
+    node: null,
   });
 
   const containerRef = useRef(null);
 
-  const closeContextMenu = useCallback(() => {
-    setCtxMenu((m) => (m.visible ? { ...m, visible: false, node: null } : m));
+  // ファイル移動処理
+  const handleFileMove = useCallback(async (draggedItem) => {
+    try {
+      ConsoleMsg?.("info", "File move requested", draggedItem);
+      // TODO: バックエンドAPIを呼び出してファイル移動を実行
+      // await moveFileAPI(draggedItem.path, targetPath);
+      // handleRefresh();
+    } catch (error) {
+      ConsoleMsg?.("error", "File move failed", error);
+    }
   }, []);
 
-  // 右クリック呼び出し
+  // ドロップ機能（refを含む）
+  const { dropRef, dropProps, isDropTarget } = useTreeDrop(handleFileMove);
+
+  // コンテキストメニュー管理
+  const closeContextMenu = useCallback(() => {
+    setCtxMenu((prev) => (prev.visible ? { ...prev, visible: false, node: null } : prev));
+  }, []);
+
   const handleFolderContextMenu = useCallback((e, node) => {
     e.preventDefault();
     e.stopPropagation();
-    // Portal で fixed を使うのでスクリーン座標を直接使う
     setCtxMenu({
       visible: true,
       x: e.clientX,
@@ -53,52 +58,41 @@ function ProjectTree({ currentSize }) {
     });
   }, []);
 
-  // 外側クリック / ESC で閉じる
-  useEffect(() => {
-    if (!ctxMenu.visible) return;
-    const onDown = (ev) => {
-      // メニュー内クリックはそのまま
-      if (ev.target.closest?.("[data-role='folder-menu']")) return;
-      closeContextMenu();
-    };
-    const onKey = (ev) => ev.key === "Escape" && closeContextMenu();
-    window.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [ctxMenu.visible, closeContextMenu]);
-
-  // メニューアクション（必要に応じて実装）
-  const menuAction = useCallback(
+  // メニューアクション処理
+  const handleMenuAction = useCallback(
     (type) => {
       const node = ctxMenu.node;
       if (!node) return;
+
       switch (type) {
-        case "new-file":
-          // TODO
+        case CONTEXT_MENU_ACTIONS.NEW_FILE:
+          ConsoleMsg?.("info", "New file action", { nodeId: node.id });
+          // TODO: 新規ファイル作成
           break;
-        case "new-folder":
-          // TODO
+        case CONTEXT_MENU_ACTIONS.NEW_FOLDER:
+          ConsoleMsg?.("info", "New folder action", { nodeId: node.id });
+          // TODO: 新規フォルダ作成
           break;
-        case "refresh":
+        case CONTEXT_MENU_ACTIONS.REFRESH:
           handleRefresh();
           break;
-        case "collapse":
+        case CONTEXT_MENU_ACTIONS.COLLAPSE:
           setExpandedKeys((prev) => {
             const next = new Set(prev);
             if (node.id !== "root") next.delete(node.id);
             return next;
           });
           break;
-        case "rename":
-          // TODO
+        case CONTEXT_MENU_ACTIONS.RENAME:
+          ConsoleMsg?.("info", "Rename action", { nodeId: node.id });
+          // TODO: リネーム処理
           break;
-        case "delete":
-          // TODO
+        case CONTEXT_MENU_ACTIONS.DELETE:
+          ConsoleMsg?.("info", "Delete action", { nodeId: node.id });
+          // TODO: 削除処理
           break;
         default:
+          ConsoleMsg?.("warn", "Unknown menu action", { type });
           break;
       }
       closeContextMenu();
@@ -106,53 +100,71 @@ function ProjectTree({ currentSize }) {
     [ctxMenu.node, handleRefresh, setExpandedKeys, closeContextMenu]
   );
 
-  // === レンダリング関数 ===
+  // 外側クリック/ESCでメニューを閉じる
+  useEffect(() => {
+    if (!ctxMenu.visible) return;
 
-  /**
-   * ツリーアイテムの再帰的レンダリング
-   * TreeItemComponent を使用して各アイテムを描画
-   */
+    const handleClickOutside = (ev) => {
+      if (!ev.target.closest?.("[data-role='folder-menu']")) {
+        closeContextMenu();
+      }
+    };
+
+    const handleKeydown = (ev) => {
+      if (ev.key === "Escape") {
+        closeContextMenu();
+      }
+    };
+
+    window.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKeydown);
+
+    return () => {
+      window.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeydown);
+    };
+  }, [ctxMenu.visible, closeContextMenu]);
+
+  // ツリーアイテムのレンダリング
   const renderItem = useCallback(
     (item) => (
       <TreeItemComponent
+        key={item.id}
         item={item}
         renderItem={renderItem}
         toolbarHandlers={{
-          handleNewFile: () => menuAction("new-file"),
-          handleNewFolder: () => menuAction("new-folder"),
+          handleNewFile: () => handleMenuAction(CONTEXT_MENU_ACTIONS.NEW_FILE),
+          handleNewFolder: () => handleMenuAction(CONTEXT_MENU_ACTIONS.NEW_FOLDER),
           handleRefresh,
           handleCollapseAll,
         }}
         onFolderContextMenu={handleFolderContextMenu}
       />
     ),
-    [handleFolderContextMenu, handleRefresh, handleCollapseAll, menuAction]
+    [handleFolderContextMenu, handleRefresh, handleCollapseAll, handleMenuAction]
   );
 
-  // === メインレンダリング ===
   return (
     <div
       ref={containerRef}
-      className="h-full flex flex-col bg-base-100 relative"
+      className={`${DROP_ZONE_STYLES.base} ${isDropTarget ? DROP_ZONE_STYLES.active : ""}`}
       onContextMenuCapture={(e) => {
-        // 既に子で stopPropagation 済みならここに来ない
         if (e.defaultPrevented) return;
-        // フォルダ行以外の余白右クリック: メニュー閉じるのみ
         if (!e.target.closest("[data-node-row]")) {
           e.preventDefault();
           closeContextMenu();
         }
       }}
     >
-      {/* ヘッダー部分（左に余白追加） */}
-      <div className="flex flex-col justify-center py-1 px-1">
+      {/* ヘッダー */}
+      <header className="flex flex-col justify-center py-1 px-1">
         <h2 id="tree-heading" className="text-sm font-semibold py-1">
           プロジェクト エキスプローラ
         </h2>
-      </div>
+      </header>
 
-      {/* ツリー表示エリア（メイン部分） */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
+      {/* ツリー表示エリア（ドロップゾーン） */}
+      <div ref={dropRef} {...dropProps} className={`${DROP_ZONE_STYLES.content} ${isDropTarget ? "bg-base-200" : ""}`}>
         <Tree
           aria-label="プロジェクトファイルツリー"
           aria-labelledby="tree-heading"
@@ -170,11 +182,10 @@ function ProjectTree({ currentSize }) {
         </Tree>
       </div>
 
-      {/* === コンテキストメニュー（分離コンポーネント） === */}
-      <FolderContextMenu visible={ctxMenu.visible} x={ctxMenu.x} y={ctxMenu.y} node={ctxMenu.node} onAction={menuAction} onClose={closeContextMenu} />
+      {/* コンテキストメニュー */}
+      <FolderContextMenu visible={ctxMenu.visible} x={ctxMenu.x} y={ctxMenu.y} node={ctxMenu.node} onAction={handleMenuAction} onClose={closeContextMenu} />
     </div>
   );
 }
 
-// React DevToolsでの表示名を設定
 export default memo(ProjectTree);
