@@ -1,5 +1,16 @@
-import React, { useCallback, useState } from "react";
-import ReactFlow, { MiniMap, Controls, Background, useNodesState, useEdgesState, addEdge, ConnectionLineType, Panel } from "reactflow";
+import React, { useCallback, useState, useRef } from "react";
+import ReactFlow, {
+  MiniMap,
+  Controls,
+  Background,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  ConnectionLineType,
+  Panel,
+  useReactFlow,
+  ReactFlowProvider, // 追加
+} from "reactflow";
 import "reactflow/dist/style.css";
 import ConsoleMsg from "../../utils/ConsoleMsg";
 import { nodeTypes } from "./CustomNodes";
@@ -180,18 +191,20 @@ const initialEdges = [
 ];
 
 /**
- * FlowEditor コンポーネント
- *
- * React Flowを使用したフローチャートエディタ
- * ノードの追加、接続、移動などの基本的な編集機能を提供
+ * FlowEditor の内部コンポーネント（useReactFlowを使用する部分）
  */
-function FlowEditor() {
+function FlowEditorInner() {
   // React Flow状態管理
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const { screenToFlowPosition } = useReactFlow(); // これでエラーが解決される
 
   // ノードカウンター（新しいノードのID生成用）
   const [nodeCounter, setNodeCounter] = useState(6);
+
+  // ドラッグ&ドロップ状態
+  const [isDragOver, setIsDragOver] = useState(false);
+  const reactFlowWrapper = useRef(null);
 
   /**
    * エッジ接続時のコールバック
@@ -201,7 +214,7 @@ function FlowEditor() {
       const newEdge = {
         ...params,
         type: "smoothstep",
-        animated: Math.random() > 0.5, // ランダムでアニメーション
+        animated: Math.random() > 0.5,
       };
       setEdges((eds) => addEdge(newEdge, eds));
       ConsoleMsg("info", "新しいエッジを追加しました", newEdge);
@@ -288,8 +301,211 @@ function FlowEditor() {
     ConsoleMsg("info", "エッジが選択されました", edge);
   }, []);
 
+  /**
+   * ファイルタイプに基づいてノードタイプを決定
+   */
+  const getNodeTypeFromFile = useCallback((file) => {
+    const fileName = file.name.toLowerCase();
+    const extension = fileName.split(".").pop();
+
+    switch (extension) {
+      case "csv":
+        return "inputFileCsv";
+      case "json":
+        return "inputFileJson";
+      case "xml":
+        return "inputFileXml";
+      case "txt":
+        return "inputFileText";
+      default:
+        return "inputFile";
+    }
+  }, []);
+
+  /**
+   * ファイルに基づいてノードデータを生成
+   */
+  const createNodeDataFromFile = useCallback((file) => {
+    const fileName = file.name;
+    const extension = fileName.split(".").pop()?.toLowerCase();
+
+    const baseData = {
+      fileName: fileName,
+      fileSize: file.size,
+      lastModified: file.lastModified,
+    };
+
+    switch (extension) {
+      case "csv":
+        return {
+          ...baseData,
+          color: "#20b2aa",
+          encoding: "UTF-8",
+          delimiter: ",",
+          hasHeader: true,
+        };
+      case "json":
+        return {
+          ...baseData,
+          color: "#f59e0b",
+          format: "JSON",
+        };
+      case "xml":
+        return {
+          ...baseData,
+          color: "#8b5cf6",
+          format: "XML",
+        };
+      default:
+        return {
+          ...baseData,
+          color: "#6b7280",
+        };
+    }
+  }, []);
+
+  /**
+   * ドラッグオーバー処理
+   */
+  const onDragOver = useCallback((event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setIsDragOver(true); // ここで状態をtrueに
+  }, []);
+
+  /**
+   * ドラッグリーブ処理
+   */
+  const onDragLeave = useCallback((event) => {
+    event.preventDefault();
+    setIsDragOver(false); // ここで状態をfalseに
+  }, []);
+
+  /**
+   * ファイルドロップ処理
+   */
+  const onDrop = useCallback(
+    (event) => {
+      event.preventDefault();
+      setIsDragOver(false);
+
+      const files = Array.from(event.dataTransfer.files);
+      const filePath = event.dataTransfer.getData("application/x-file-path");
+      const fileName = event.dataTransfer.getData("application/x-file-name");
+
+      if (!reactFlowWrapper.current) return;
+
+      // ReactFlowの座標系に変換するためのより正確な方法
+      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
+      
+      // クライアント座標からReactFlow内の相対座標を計算
+      const clientPosition = {
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top,
+      };
+
+      if (files.length > 0) {
+        // 複数ファイルの場合
+        files.forEach((file, index) => {
+          // screenToFlowPositionを使ってFlow座標系に変換
+          const position = screenToFlowPosition({
+            x: clientPosition.x,
+            y: clientPosition.y + (index * 80), // ファイル間隔を80pxに
+          });
+
+          const nodeType = getNodeTypeFromFile(file);
+          const nodeData = createNodeDataFromFile(file);
+
+          const newNode = {
+            id: `file-${nodeCounter + index}-${Date.now()}`, // 重複を避けるためタイムスタンプ追加
+            type: nodeType,
+            data: nodeData,
+            position,
+          };
+
+          setNodes((nds) => [...nds, newNode]);
+
+          ConsoleMsg("info", "ファイルからノードを作成しました", {
+            fileName: file.name,
+            nodeType,
+            position,
+            clientPosition,
+          });
+        });
+
+        setNodeCounter((prev) => prev + files.length);
+        
+      } else if (filePath && fileName) {
+        // ProjectTreeからのドロップ
+        const position = screenToFlowPosition(clientPosition);
+
+        const extension = fileName.split(".").pop()?.toLowerCase();
+        const nodeType = extension === "csv" ? "inputFileCsv" : "inputFile";
+
+        const newNode = {
+          id: `tree-file-${nodeCounter}-${Date.now()}`,
+          type: nodeType,
+          data: {
+            fileName: fileName,
+            filePath: filePath,
+            color: extension === "csv" ? "#20b2aa" : "#6b7280",
+            ...(extension === "csv" && {
+              encoding: "UTF-8",
+              delimiter: ",",
+              hasHeader: true,
+            }),
+          },
+          position,
+        };
+
+        setNodes((nds) => [...nds, newNode]);
+        setNodeCounter((prev) => prev + 1);
+
+        ConsoleMsg("info", "ProjectTreeからノードを作成しました", {
+          fileName,
+          filePath,
+          nodeType,
+          position,
+          clientPosition,
+        });
+      }
+    },
+    [nodeCounter, setNodes, screenToFlowPosition, getNodeTypeFromFile, createNodeDataFromFile]
+  );
+
+  /**
+   * CSVファイルノードを手動追加
+   */
+  const addCsvNode = useCallback(() => {
+    const newNode = {
+      id: `csv-${nodeCounter}`,
+      type: "inputFileCsv",
+      data: {
+        fileName: `sample-${nodeCounter}.csv`,
+        color: "#20b2aa",
+        encoding: "UTF-8",
+        delimiter: ",",
+        hasHeader: true,
+      },
+      position: {
+        x: Math.random() * 400 + 50,
+        y: Math.random() * 300 + 50,
+      },
+    };
+
+    setNodes((nds) => [...nds, newNode]);
+    setNodeCounter((prev) => prev + 1);
+    ConsoleMsg("info", "CSVノードを追加しました", newNode);
+  }, [nodeCounter, setNodes]);
+
+  /**
+   * FlowEditor コンポーネント
+   *
+   * React Flowを使用したフローチャートエディタ
+   * ノードの追加、接続、移動などの基本的な編集機能を提供
+   */
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full" ref={reactFlowWrapper}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -298,17 +514,33 @@ function FlowEditor() {
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
         nodeTypes={nodeTypes}
         connectionLineType={ConnectionLineType.SmoothStep}
         fitView
         fitViewOptions={{
           padding: 0.2,
         }}
-        className="bg-base-100"
+        className={`bg-base-100 `}
         proOptions={{
           hideAttribution: true,
         }}
       >
+        {/* ドラッグオーバー時のオーバーレイ */}
+        {/* {isDragOver && (
+          <div className="absolute inset-0 bg-primary bg-opacity-10 flex items-center justify-center z-50 pointer-events-none">
+            <div className="bg-white rounded-lg p-6 shadow-lg border-2 border-dashed border-primary">
+              <div className="text-center">
+                <div className="text-4xl mb-2">📁</div>
+                <div className="text-lg font-semibold text-primary">ファイルをドロップしてノードを作成</div>
+                <div className="text-sm text-gray-600 mt-1">CSV, JSON, XML, TXTファイルに対応</div>
+              </div>
+            </div>
+          </div>
+        )} */}
+
         {/* コントロールパネル */}
         <Panel position="top-left" className="space-x-2 space-y-2 flex flex-col">
           <div className="space-x-2">
@@ -317,6 +549,9 @@ function FlowEditor() {
             </button>
             <button onClick={addSimpleNode} className="rounded bg-blue-500 px-3 py-2 text-sm text-white transition-colors hover:bg-blue-600">
               シンプルノード追加
+            </button>
+            <button onClick={addCsvNode} className="rounded bg-emerald-500 px-3 py-2 text-sm text-white transition-colors hover:bg-emerald-600">
+              CSVノード追加
             </button>
           </div>
           <div className="space-x-2">
@@ -327,6 +562,9 @@ function FlowEditor() {
               クリア
             </button>
           </div>
+
+          {/* ファイルドロップ案内 */}
+          <div className="mt-4 p-2 bg-info bg-opacity-20 rounded text-xs text-info-content">💡 ファイルをドラッグ&ドロップしてノードを作成できます</div>
         </Panel>
 
         {/* 情報パネル */}
@@ -337,6 +575,8 @@ function FlowEditor() {
             <div className="mt-2 text-xs">
               <div>テキストノード: {nodes.filter((n) => n.type === "customText").length}</div>
               <div>シンプルノード: {nodes.filter((n) => n.type === "customSimple").length}</div>
+              <div>CSVノード: {nodes.filter((n) => n.type === "inputFileCsv").length}</div>
+              <div>ファイルノード: {nodes.filter((n) => n.type?.startsWith("inputFile")).length}</div>
             </div>
           </div>
         </Panel>
@@ -349,6 +589,8 @@ function FlowEditor() {
                 return "#14b8a6";
               case "customSimple":
                 return "#3b82f6";
+              case "inputFileCsv":
+                return "#20b2aa";
               case "input":
                 return "#22c55e";
               case "output":
@@ -370,6 +612,17 @@ function FlowEditor() {
         <Background variant="dots" gap={20} size={1} color="#94a3b8" className="bg-base-100" />
       </ReactFlow>
     </div>
+  );
+}
+
+/**
+ * FlowEditor メインコンポーネント（ReactFlowProviderでラップ）
+ */
+function FlowEditor() {
+  return (
+    <ReactFlowProvider>
+      <FlowEditorInner />
+    </ReactFlowProvider>
   );
 }
 
