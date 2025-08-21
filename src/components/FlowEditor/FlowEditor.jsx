@@ -395,13 +395,10 @@ function FlowEditorInner() {
 
       if (!reactFlowWrapper.current) return;
 
-      // ReactFlowの座標系に変換するためのより正確な方法
-      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
-      
-      // クライアント座標からReactFlow内の相対座標を計算
-      const clientPosition = {
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
+      // screenToFlowPositionに直接画面座標を渡す
+      const screenPosition = {
+        x: event.clientX,
+        y: event.clientY,
       };
 
       if (files.length > 0) {
@@ -409,8 +406,8 @@ function FlowEditorInner() {
         files.forEach((file, index) => {
           // screenToFlowPositionを使ってFlow座標系に変換
           const position = screenToFlowPosition({
-            x: clientPosition.x,
-            y: clientPosition.y + (index * 80), // ファイル間隔を80pxに
+            x: screenPosition.x,
+            y: screenPosition.y + (index * 80), // ファイル間隔を80pxに
           });
 
           const nodeType = getNodeTypeFromFile(file);
@@ -429,7 +426,7 @@ function FlowEditorInner() {
             fileName: file.name,
             nodeType,
             position,
-            clientPosition,
+            clientPosition: screenPosition,
           });
         });
 
@@ -437,7 +434,7 @@ function FlowEditorInner() {
         
       } else if (filePath && fileName) {
         // ProjectTreeからのドロップ
-        const position = screenToFlowPosition(clientPosition);
+        const position = screenToFlowPosition(screenPosition);
 
         const extension = fileName.split(".").pop()?.toLowerCase();
         const nodeType = extension === "csv" ? "inputFileCsv" : "inputFile";
@@ -466,7 +463,7 @@ function FlowEditorInner() {
           filePath,
           nodeType,
           position,
-          clientPosition,
+          clientPosition: screenPosition,
         });
       }
     },
