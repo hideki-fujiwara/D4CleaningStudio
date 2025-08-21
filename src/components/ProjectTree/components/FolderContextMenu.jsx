@@ -6,7 +6,7 @@
 // - paste は canPaste=false の場合 disabled
 import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { FOLDER_CONTEXT_MENU_ITEMS } from "./constants";
+import { FOLDER_CONTEXT_MENU_ITEMS } from "../constants";
 
 /**
  * FolderContextMenu

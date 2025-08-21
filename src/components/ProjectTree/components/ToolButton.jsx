@@ -3,7 +3,7 @@
  */
 import React, { memo } from "react";
 import { Button } from "react-aria-components";
-import { TOOLBAR_STYLES } from "./constants";
+import { TOOLBAR_STYLES } from "../constants";
 
 /**
  * ツールバー用ボタンコンポーネント

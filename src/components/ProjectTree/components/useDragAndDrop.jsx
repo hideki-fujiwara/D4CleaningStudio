@@ -3,8 +3,8 @@
  */
 import { useDrag, useDrop } from "react-aria";
 import { useRef } from "react";
-import { DRAG_DROP_TYPES, FILE_TYPES } from "./constants";
-import ConsoleMsg from "../../utils/ConsoleMsg";
+import { DRAG_DROP_TYPES, FILE_TYPES } from "../constants";
+import ConsoleMsg from "../../../utils/ConsoleMsg";
 
 /**
  * ドラッグ機能のフック
@@ -137,3 +137,12 @@ export function useFolderDrop(folderId, onFileMove) {
 
   return { dropRef, dropProps, isDropTarget };
 }
+
+// デフォルトエクスポートを追加（メインで使用される関数をまとめて）
+const dragAndDropHooks = {
+  useTreeItemDrag,
+  useTreeDrop,
+  useFolderDrop,
+};
+
+export default dragAndDropHooks;

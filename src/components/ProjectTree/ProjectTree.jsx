@@ -4,11 +4,11 @@
 import React, { memo, useState, useRef, useCallback, useEffect } from "react";
 import { Tree } from "react-aria-components";
 import ConsoleMsg from "../../utils/ConsoleMsg";
-import { useProjectTree } from "./useProjectTree";
-import { useTreeDrop } from "./useDragAndDrop";
+import { useProjectTree } from "./utils/useProjectTree";
+import { useTreeDrop } from "./components/useDragAndDrop"; // 名前付きインポートに修正
 import { DROP_ZONE_STYLES, CONTEXT_MENU_ACTIONS } from "./constants";
-import TreeItemComponent from "./TreeItemComponent";
-import FolderContextMenu from "./FolderContextMenu";
+import TreeItemComponent from "./components/TreeItemComponent";
+import FolderContextMenu from "./components/FolderContextMenu";
 
 /**
  * プロジェクトエキスプローラのメインコンポーネント
