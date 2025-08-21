@@ -223,10 +223,57 @@ function FlowEditorInner() {
   );
 
   /**
-   * 新しいノードを追加する
+   * ノードのサイズを取得（ノードタイプに基づく推定値）
+   */
+  const getNodeSize = useCallback((nodeType) => {
+    switch (nodeType) {
+      case "inputFileCsv":
+        return { width: 200, height: 80 }; // CSVノードの推定サイズ
+      case "inputFileJson":
+        return { width: 200, height: 80 };
+      case "inputFileXml":
+        return { width: 200, height: 80 };
+      case "inputFileText":
+        return { width: 200, height: 80 };
+      case "inputFile":
+        return { width: 200, height: 80 };
+      case "customText":
+        return { width: 250, height: 200 }; // テキストノードの推定サイズ
+      case "customSimple":
+        return { width: 220, height: 150 }; // シンプルノードの推定サイズ
+      default:
+        return { width: 200, height: 100 };
+    }
+  }, []);
+
+  /**
+   * ドロップ位置を中心座標として調整
+   */
+  const adjustPositionToCenter = useCallback(
+    (position, nodeType) => {
+      const nodeSize = getNodeSize(nodeType);
+      return {
+        x: position.x - nodeSize.width / 2,
+        y: position.y - nodeSize.height / 2,
+      };
+    },
+    [getNodeSize]
+  );
+
+  /**
+   * 新しいノードを追加する（中心座標調整版）
    */
   const addNode = useCallback(
     (nodeType = "customSimple") => {
+      // ランダムな位置を生成
+      const randomPosition = {
+        x: Math.random() * 400 + 200, // 中央寄りに配置
+        y: Math.random() * 300 + 100,
+      };
+
+      // 中心座標として調整
+      const position = adjustPositionToCenter(randomPosition, nodeType);
+
       const newNode = {
         id: `${nodeCounter}`,
         type: nodeType,
@@ -240,18 +287,44 @@ function FlowEditorInner() {
                 label: `ノード ${nodeCounter}`,
                 description: "新しいノード",
               },
-        position: {
-          x: Math.random() * 400 + 50,
-          y: Math.random() * 300 + 50,
-        },
+        position,
       };
 
       setNodes((nds) => nds.concat(newNode));
       setNodeCounter((prev) => prev + 1);
       ConsoleMsg("info", "新しいノードを追加しました", newNode);
     },
-    [nodeCounter, setNodes]
+    [nodeCounter, setNodes, adjustPositionToCenter]
   );
+
+  /**
+   * CSVファイルノードを手動追加（中心座標調整版）
+   */
+  const addCsvNode = useCallback(() => {
+    const randomPosition = {
+      x: Math.random() * 400 + 200,
+      y: Math.random() * 300 + 100,
+    };
+
+    const position = adjustPositionToCenter(randomPosition, "inputFileCsv");
+
+    const newNode = {
+      id: `csv-${nodeCounter}`,
+      type: "inputFileCsv",
+      data: {
+        fileName: `sample-${nodeCounter}.csv`,
+        color: "#20b2aa",
+        encoding: "UTF-8",
+        delimiter: ",",
+        hasHeader: true,
+      },
+      position,
+    };
+
+    setNodes((nds) => [...nds, newNode]);
+    setNodeCounter((prev) => prev + 1);
+    ConsoleMsg("info", "CSVノードを追加しました", newNode);
+  }, [nodeCounter, setNodes, adjustPositionToCenter]);
 
   /**
    * テキストノードを追加
@@ -404,13 +477,17 @@ function FlowEditorInner() {
       if (files.length > 0) {
         // 複数ファイルの場合
         files.forEach((file, index) => {
+          const nodeType = getNodeTypeFromFile(file);
+
           // screenToFlowPositionを使ってFlow座標系に変換
-          const position = screenToFlowPosition({
+          const flowPosition = screenToFlowPosition({
             x: screenPosition.x,
-            y: screenPosition.y + (index * 80), // ファイル間隔を80pxに
+            y: screenPosition.y + index * 100, // ファイル間隔を100pxに（ノードの高さを考慮）
           });
 
-          const nodeType = getNodeTypeFromFile(file);
+          // ドロップ位置を中心座標として調整
+          const position = adjustPositionToCenter(flowPosition, nodeType);
+
           const nodeData = createNodeDataFromFile(file);
 
           const newNode = {
@@ -425,19 +502,22 @@ function FlowEditorInner() {
           ConsoleMsg("info", "ファイルからノードを作成しました", {
             fileName: file.name,
             nodeType,
-            position,
+            dropPosition: flowPosition,
+            adjustedPosition: position,
             clientPosition: screenPosition,
           });
         });
 
         setNodeCounter((prev) => prev + files.length);
-        
       } else if (filePath && fileName) {
         // ProjectTreeからのドロップ
-        const position = screenToFlowPosition(screenPosition);
-
         const extension = fileName.split(".").pop()?.toLowerCase();
         const nodeType = extension === "csv" ? "inputFileCsv" : "inputFile";
+
+        const flowPosition = screenToFlowPosition(screenPosition);
+
+        // ドロップ位置を中心座標として調整
+        const position = adjustPositionToCenter(flowPosition, nodeType);
 
         const newNode = {
           id: `tree-file-${nodeCounter}-${Date.now()}`,
@@ -462,38 +542,14 @@ function FlowEditorInner() {
           fileName,
           filePath,
           nodeType,
-          position,
+          dropPosition: flowPosition,
+          adjustedPosition: position,
           clientPosition: screenPosition,
         });
       }
     },
-    [nodeCounter, setNodes, screenToFlowPosition, getNodeTypeFromFile, createNodeDataFromFile]
+    [nodeCounter, setNodes, screenToFlowPosition, getNodeTypeFromFile, createNodeDataFromFile, adjustPositionToCenter]
   );
-
-  /**
-   * CSVファイルノードを手動追加
-   */
-  const addCsvNode = useCallback(() => {
-    const newNode = {
-      id: `csv-${nodeCounter}`,
-      type: "inputFileCsv",
-      data: {
-        fileName: `sample-${nodeCounter}.csv`,
-        color: "#20b2aa",
-        encoding: "UTF-8",
-        delimiter: ",",
-        hasHeader: true,
-      },
-      position: {
-        x: Math.random() * 400 + 50,
-        y: Math.random() * 300 + 50,
-      },
-    };
-
-    setNodes((nds) => [...nds, newNode]);
-    setNodeCounter((prev) => prev + 1);
-    ConsoleMsg("info", "CSVノードを追加しました", newNode);
-  }, [nodeCounter, setNodes]);
 
   /**
    * FlowEditor コンポーネント
