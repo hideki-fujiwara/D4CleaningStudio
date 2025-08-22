@@ -25,7 +25,7 @@ import { useHtmlDragAndDrop } from "./hooks/useHtmlDragAndDrop";
  * FlowEditorの内部実装
  * ReactFlowProvider内で動作する必要があるため分離
  */
-function FlowEditorInner({ initialMode }) {
+function FlowEditorInner({ initialMode, loadedData, filePath, fileName }) {
   // ========================================================================================
   // カスタムフック使用
   // ========================================================================================
@@ -53,7 +53,14 @@ function FlowEditorInner({ initialMode }) {
     redo,
     canUndo,
     canRedo,
-  } = useFlowEditor(initialMode);
+    // ファイル保存機能
+    saveFlow,
+    saveAsFlow,
+    newFlow,
+    openFlow,
+    hasUnsavedChanges,
+    fileName: displayFileName,
+  } = useFlowEditor(initialMode, loadedData, filePath, fileName);
 
   // ドラッグ&ドロップ（HTML5版）
   const { reactFlowWrapper, isDragOver, onDrop, onDragOver, onDragLeave } = useHtmlDragAndDrop(addNode);
@@ -124,6 +131,11 @@ function FlowEditorInner({ initialMode }) {
         redo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
+        saveFlow={saveFlow}
+        saveAsFlow={saveAsFlow}
+        newFlow={newFlow}
+        openFlow={openFlow}
+        hasUnsavedChanges={hasUnsavedChanges}
       />
 
       {/* メインフローエリア */}
@@ -181,6 +193,16 @@ function FlowEditorInner({ initialMode }) {
             maskColor="rgba(0, 0, 0, 0.1)"
           />
 
+          {/* ファイル名とステータス表示 */}
+          <Panel position="top-left" className="pointer-events-none">
+            <div className="bg-base-100 border border-base-300 rounded-lg p-2 text-sm shadow-lg">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{displayFileName}</span>
+                {hasUnsavedChanges && <span className="text-warning text-xs">●</span>}
+              </div>
+            </div>
+          </Panel>
+
           {/* ズーム無効時のオーバーレイ */}
           {isZoomDisabled && (
             <Panel position="top-right" className="pointer-events-none">
@@ -212,12 +234,15 @@ function FlowEditorInner({ initialMode }) {
  * ReactFlowProviderでラップして提供
  *
  * @param {Object} props - プロパティ
- * @param {string} props.initialMode - 初期モード（"default" | "empty"）
+ * @param {string} props.initialMode - 初期モード（"default" | "empty" | "loaded"）
+ * @param {Object} props.loadedData - ロードされたフローデータ
+ * @param {string} props.filePath - ファイルパス
+ * @param {string} props.fileName - ファイル名
  */
-function FlowEditor({ initialMode = "default" }) {
+function FlowEditor({ initialMode = "default", loadedData = null, filePath = null, fileName = "未保存のフロー" }) {
   return (
     <ReactFlowProvider>
-      <FlowEditorInner initialMode={initialMode} />
+      <FlowEditorInner initialMode={initialMode} loadedData={loadedData} filePath={filePath} fileName={fileName} />
     </ReactFlowProvider>
   );
 }

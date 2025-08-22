@@ -13,8 +13,8 @@ function TabContent({ selectedTab, onSelectionChange, openTabs }) {
     console.log("TabContent renderTabContent tab:", tab);
     switch (tab.component) {
       case "FlowEditor":
-        console.log("Rendering FlowEditor with initialMode:", tab.props?.initialMode);
-        return <FlowEditor initialMode={tab.props?.initialMode} />;
+        console.log("Rendering FlowEditor with props:", tab.props);
+        return <FlowEditor {...(tab.props || {})} />;
 
       case "DataViewer":
         return (

@@ -1,9 +1,12 @@
 import React from "react";
+import { open } from "@tauri-apps/plugin-dialog";
+import { readTextFile } from "@tauri-apps/plugin-fs";
 import { useTabManager } from "./hooks/useTabManager";
 import TabHeader from "./TabHeader";
 import TabContent from "./TabContent";
 import Welcome from "../Welcome/Welcome";
 import { NodeDiagramIcon } from "../Icons";
+import ConsoleMsg from "../../../utils/ConsoleMsg";
 
 /**
  * タブシステムのメインコンテナコンポーネント
@@ -15,7 +18,7 @@ function TabContainer({ initialTabs }) {
   const handleCreateNewFlow = () => {
     addTab({
       id: `flow-editor-${Date.now()}`,
-      title: "新しいノード",
+      title: "未保存のフロー",
       icon: "⧈", // ノードダイアグラムを表現する記号
       component: "FlowEditor",
       closable: true,
@@ -25,9 +28,51 @@ function TabContainer({ initialTabs }) {
     });
   };
 
-  const handleOpenProject = () => {
-    // TODO: ファイル選択ダイアログを実装
-    console.log("プロジェクトを開く機能は未実装");
+  const handleOpenProject = async () => {
+    try {
+      // ファイル選択ダイアログを表示
+      const selected = await open({
+        multiple: false,
+        filters: [
+          {
+            name: "D4 Flow Files",
+            extensions: ["d4flow"],
+          },
+          {
+            name: "All Files",
+            extensions: ["*"],
+          },
+        ],
+      });
+
+      if (selected) {
+        // ファイルを読み込み
+        const fileContent = await readTextFile(selected);
+        const flowData = JSON.parse(fileContent);
+
+        // ファイル名を取得
+        const fileName = selected.split("\\").pop().split("/").pop().replace(".d4flow", "");
+
+        // 新しいタブを追加
+        addTab({
+          id: `flow-editor-${Date.now()}`,
+          title: fileName,
+          icon: "📄",
+          component: "FlowEditor",
+          closable: true,
+          props: {
+            initialMode: "loaded",
+            loadedData: flowData,
+            filePath: selected,
+            fileName: fileName,
+          },
+        });
+
+        ConsoleMsg("success", `ファイルを開きました: ${fileName}`);
+      }
+    } catch (error) {
+      ConsoleMsg("error", `ファイルの読み込みに失敗しました: ${error.message}`);
+    }
   };
 
   const handleOpenSample = () => {

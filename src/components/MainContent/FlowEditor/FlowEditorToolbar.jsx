@@ -30,6 +30,8 @@ import {
 import {
   SaveIcon, // 保存
   SaveAsIcon, // 別名で保存
+  OpenIcon, // ファイルを開く
+  NewFileIcon, // 新規ファイル
   UndoIcon, // 元に戻す
   RedoIcon, // やり直し
   CopyIcon, // コピー
@@ -167,21 +169,30 @@ const DraggableNodeItem = ({ nodeType, tooltip, children, className = BUTTON_STY
 
 /**
  * ファイル操作グループ
- * 保存、別名で保存の機能を提供
+ * 新規作成、ファイルを開く、保存、別名で保存の機能を提供
+ *
+ * @param {Object} props - プロパティ
+ * @param {Function} props.saveFlow - 保存機能
+ * @param {Function} props.saveAsFlow - 名前をつけて保存機能
+ * @param {Function} props.newFlow - 新規ファイル作成機能
+ * @param {Function} props.openFlow - ファイルを開く機能
+ * @param {boolean} props.hasUnsavedChanges - 未保存の変更があるかどうか
  */
-const FileOperationsGroup = () => (
+const FileOperationsGroup = ({ saveFlow, saveAsFlow, newFlow, openFlow, hasUnsavedChanges }) => (
   <Group className="flex items-center gap-1">
-    <TooltipButton
-      tooltip="保存 (Ctrl+S)"
-      isDisabled={false} // TODO: 保存機能実装時の制御
-    >
+    <TooltipButton tooltip="新規 (Ctrl+N)" onPress={newFlow}>
+      <NewFileIcon className={BUTTON_STYLES.iconSize} />
+    </TooltipButton>
+
+    <TooltipButton tooltip="ファイルを開く (Ctrl+O)" onPress={openFlow}>
+      <OpenIcon className={BUTTON_STYLES.iconSize} />
+    </TooltipButton>
+
+    <TooltipButton tooltip="保存 (Ctrl+S)" onPress={saveFlow} className={hasUnsavedChanges ? BUTTON_STYLES.warning : BUTTON_STYLES.default}>
       <SaveIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
-    <TooltipButton
-      tooltip="別名で保存 (Ctrl+Shift+S)"
-      isDisabled={false} // TODO: 別名保存機能実装時の制御
-    >
+    <TooltipButton tooltip="別名で保存 (Ctrl+Shift+S)" onPress={saveAsFlow}>
       <SaveAsIcon className={`${BUTTON_STYLES.iconSize} text-[color:var(--color-warning)]`} />
     </TooltipButton>
   </Group>
@@ -464,6 +475,15 @@ const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste }) => (
  * @param {function} props.onZoomDisableChange - ズーム無効状態変更ハンドラー
  * @param {function} props.onZoomChange - ズーム率変更ハンドラー
  * @param {Object} props.copyPaste - コピー・ペースト・削除機能のオブジェクト
+ * @param {function} props.undo - Undo機能
+ * @param {function} props.redo - Redo機能
+ * @param {boolean} props.canUndo - Undo可能かどうか
+ * @param {boolean} props.canRedo - Redo可能かどうか
+ * @param {function} props.saveFlow - 保存機能
+ * @param {function} props.saveAsFlow - 名前をつけて保存機能
+ * @param {function} props.newFlow - 新規ファイル作成機能
+ * @param {function} props.openFlow - ファイルを開く機能
+ * @param {boolean} props.hasUnsavedChanges - 未保存の変更があるかどうか
  */
 const FlowEditorToolbar = ({
   onAddTextNode,
@@ -483,12 +503,18 @@ const FlowEditorToolbar = ({
   redo,
   canUndo = false,
   canRedo = false,
+  // ファイル保存
+  saveFlow,
+  saveAsFlow,
+  newFlow,
+  openFlow,
+  hasUnsavedChanges = false,
 }) => {
   return (
     <div className="bg-base-200">
       <AriaToolbar className="flex items-center px-1 py-1 gap-0">
         {/* ファイル操作グループ */}
-        <FileOperationsGroup />
+        <FileOperationsGroup saveFlow={saveFlow} saveAsFlow={saveAsFlow} newFlow={newFlow} openFlow={openFlow} hasUnsavedChanges={hasUnsavedChanges} />
 
         <Separator className={`w-px ${BUTTON_STYLES.separatorHeight} bg-base-300 mx-2`} />
 

@@ -10,26 +10,39 @@
  */
 import { useCallback, useState, useRef, useEffect } from "react";
 import { useNodesState, useEdgesState, addEdge, useReactFlow } from "reactflow";
+import { save, open } from "@tauri-apps/plugin-dialog";
+import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
 import ConsoleMsg from "../../../../utils/ConsoleMsg";
 import { initialNodes, initialEdges } from "../data/initialData";
 import { useCopyPaste } from "./useCopyPaste";
 
 /**
  * FlowEditorのメインロジックを管理するフック
- * @param {string} initialMode - 初期モード（"default" | "empty"）
+ * @param {string} initialMode - 初期モード（"default" | "empty" | "loaded"）
+ * @param {Object} loadedData - ロードされたフローデータ（initialMode === "loaded"の場合）
+ * @param {string} filePath - ファイルパス（既存ファイルの場合）
+ * @param {string} fileName - ファイル名
  */
-export const useFlowEditor = (initialMode = "default") => {
+export const useFlowEditor = (initialMode = "default", loadedData = null, filePath = null, fileName = "未保存のフロー") => {
   // ========================================================================================
   // 初期データ設定
   // ========================================================================================
 
   const getInitialNodes = () => {
+    if (initialMode === "loaded" && loadedData?.nodes) {
+      console.log("getInitialNodes (loaded):", loadedData.nodes.length, "nodes");
+      return loadedData.nodes;
+    }
     const nodes = initialMode === "empty" ? [] : initialNodes;
     console.log("getInitialNodes:", nodes.length, "nodes");
     return nodes;
   };
 
   const getInitialEdges = () => {
+    if (initialMode === "loaded" && loadedData?.edges) {
+      console.log("getInitialEdges (loaded):", loadedData.edges.length, "edges");
+      return loadedData.edges;
+    }
     const edges = initialMode === "empty" ? [] : initialEdges;
     console.log("getInitialEdges:", edges.length, "edges");
     return edges;
@@ -46,14 +59,46 @@ export const useFlowEditor = (initialMode = "default") => {
   // React Flowのユーティリティ関数（座標変換用）
   const { screenToFlowPosition, getNodes, getEdges } = useReactFlow();
 
-  // ノードカウンター（新しいノードのID生成用）
-  const [nodeCounter, setNodeCounter] = useState(6);
-
   // ドラッグ&ドロップ状態
   const [isDragOver, setIsDragOver] = useState(false);
 
   // React Flowコンテナへの参照
   const reactFlowWrapper = useRef(null);
+
+  // ========================================================================================
+  // ファイル保存管理
+  // ========================================================================================
+
+  // 現在のファイルパス（null = 新規ファイル）
+  const [currentFilePath, setCurrentFilePath] = useState(filePath);
+
+  // 保存状態（変更があったかどうか）
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(initialMode === "loaded" ? false : false);
+
+  // ファイル名（表示用）
+  const [displayFileName, setDisplayFileName] = useState(fileName);
+
+  // ノードカウンター（新しいノードのID生成用）
+  // ロードされたデータがある場合は、最大IDを取得
+  const getInitialNodeCounter = () => {
+    if (initialMode === "loaded" && loadedData?.nodeCounter) {
+      return loadedData.nodeCounter;
+    }
+    if (initialMode === "loaded" && loadedData?.nodes) {
+      // ノードIDから最大値を取得
+      const maxId = Math.max(
+        0,
+        ...loadedData.nodes.map((node) => {
+          const match = node.id.match(/\d+$/);
+          return match ? parseInt(match[0]) : 0;
+        })
+      );
+      return maxId + 1;
+    }
+    return 6; // デフォルト値
+  };
+
+  const [nodeCounter, setNodeCounter] = useState(getInitialNodeCounter());
 
   // ========================================================================================
   // 履歴管理（Undo/Redo）
@@ -67,11 +112,14 @@ export const useFlowEditor = (initialMode = "default") => {
   // 履歴操作中フラグ（履歴復元時に新しい履歴を作成しないため）
   const isRestoringHistory = useRef(false);
 
+  // 保存処理中フラグ（保存時に履歴を作成しないため）
+  const isSaving = useRef(false);
+
   // 履歴への状態保存
   const saveToHistory = useCallback(
     (nodes, edges) => {
-      // 履歴復元中は新しい履歴を作成しない
-      if (isRestoringHistory.current) {
+      // 履歴復元中または保存中は新しい履歴を作成しない
+      if (isRestoringHistory.current || isSaving.current) {
         return;
       }
 
@@ -381,6 +429,282 @@ export const useFlowEditor = (initialMode = "default") => {
   }, [undo, redo]);
 
   // ========================================================================================
+  // ファイル保存機能
+  // ========================================================================================
+
+  /**
+   * フローデータを保存用のJSONに変換
+   */
+  const exportFlowData = useCallback(() => {
+    const currentNodes = getNodes();
+    const currentEdges = getEdges();
+
+    return {
+      version: "1.0.0",
+      timestamp: new Date().toISOString(),
+      nodes: currentNodes,
+      edges: currentEdges,
+      nodeCounter: nodeCounter,
+      metadata: {
+        fileName: fileName,
+        totalNodes: currentNodes.length,
+        totalEdges: currentEdges.length,
+      },
+    };
+  }, [getNodes, getEdges, nodeCounter, fileName]);
+
+  /**
+   * 保存機能（Ctrl+S）
+   * 既存ファイルがある場合は上書き、新規の場合は名前をつけて保存
+   */
+  const saveFlow = useCallback(async () => {
+    try {
+      // 保存処理中フラグを設定
+      isSaving.current = true;
+
+      const flowData = exportFlowData();
+      const jsonString = JSON.stringify(flowData, null, 2);
+
+      if (currentFilePath) {
+        // 既存ファイルに上書き保存
+        await writeTextFile(currentFilePath, jsonString);
+        setHasUnsavedChanges(false);
+
+        // 保存成功時に履歴をクリア
+        setHistory([]);
+        setCurrentHistoryIndex(-1);
+
+        ConsoleMsg("success", `ファイルを保存しました: ${fileName}`);
+      } else {
+        // 新規ファイルなので名前をつけて保存のダイアログを表示
+        const filePath = await save({
+          filters: [
+            {
+              name: "D4 Flow Files",
+              extensions: ["d4flow"],
+            },
+            {
+              name: "JSON Files",
+              extensions: ["json"],
+            },
+          ],
+          defaultPath: `${fileName.replace("未保存の", "新しい")}.d4flow`,
+        });
+
+        if (filePath) {
+          // ファイルに保存
+          await writeTextFile(filePath, jsonString);
+
+          // ファイル名を抽出（パスから拡張子を除いたファイル名）
+          const fileNameOnly = filePath
+            .split(/[\\/]/)
+            .pop()
+            .replace(/\.[^/.]+$/, "");
+
+          // 状態を更新
+          setCurrentFilePath(filePath);
+          setDisplayFileName(fileNameOnly);
+          setHasUnsavedChanges(false);
+
+          // 保存成功時に履歴をクリア
+          setHistory([]);
+          setCurrentHistoryIndex(-1);
+
+          ConsoleMsg("success", `ファイルを保存しました: ${fileNameOnly}`);
+        }
+      }
+    } catch (error) {
+      ConsoleMsg("error", `保存中にエラーが発生しました: ${error.message}`);
+      console.error("保存エラー:", error);
+    } finally {
+      // 保存処理完了後にフラグをリセット
+      isSaving.current = false;
+    }
+  }, [currentFilePath, fileName, exportFlowData, setHistory, setCurrentHistoryIndex]);
+
+  /**
+   * 名前をつけて保存機能（Ctrl+Shift+S）
+   */
+  const saveAsFlow = useCallback(async () => {
+    try {
+      // 保存処理中フラグを設定
+      isSaving.current = true;
+
+      const flowData = exportFlowData();
+      const jsonString = JSON.stringify(flowData, null, 2);
+
+      // Tauriのファイル保存ダイアログを表示
+      const filePath = await save({
+        filters: [
+          {
+            name: "D4 Flow Files",
+            extensions: ["d4flow"],
+          },
+          {
+            name: "JSON Files",
+            extensions: ["json"],
+          },
+        ],
+        defaultPath: `${fileName.replace("未保存の", "新しい")}.d4flow`,
+      });
+
+      if (filePath) {
+        // ファイルに保存
+        await writeTextFile(filePath, jsonString);
+
+        // ファイル名を抽出（パスから拡張子を除いたファイル名）
+        const fileNameOnly = filePath
+          .split(/[\\/]/)
+          .pop()
+          .replace(/\.[^/.]+$/, "");
+
+        // 状態を更新
+        setCurrentFilePath(filePath);
+        setDisplayFileName(fileNameOnly);
+        setHasUnsavedChanges(false);
+
+        // 保存成功時に履歴をクリア
+        setHistory([]);
+        setCurrentHistoryIndex(-1);
+
+        ConsoleMsg("success", `ファイルを保存しました: ${fileNameOnly}`);
+      }
+    } catch (error) {
+      ConsoleMsg("error", `保存中にエラーが発生しました: ${error.message}`);
+      console.error("名前をつけて保存エラー:", error);
+    } finally {
+      // 保存処理完了後にフラグをリセット
+      isSaving.current = false;
+    }
+  }, [exportFlowData, fileName, setHistory, setCurrentHistoryIndex]);
+
+  /**
+   * ファイルを開く機能（Ctrl+O）
+   */
+  const openFlow = useCallback(async () => {
+    try {
+      if (hasUnsavedChanges) {
+        const result = confirm("未保存の変更があります。ファイルを開きますか？変更は失われます。");
+        if (!result) return;
+      }
+
+      // Tauriのファイル選択ダイアログを表示
+      const filePath = await open({
+        filters: [
+          {
+            name: "D4 Flow Files",
+            extensions: ["d4flow"],
+          },
+          {
+            name: "JSON Files",
+            extensions: ["json"],
+          },
+        ],
+        multiple: false,
+      });
+
+      if (filePath) {
+        // ファイルを読み込み
+        const fileContent = await readTextFile(filePath);
+        const flowData = JSON.parse(fileContent);
+
+        // データの妥当性をチェック
+        if (flowData.nodes && flowData.edges) {
+          // フローデータを復元
+          setNodes(flowData.nodes || []);
+          setEdges(flowData.edges || []);
+          setNodeCounter(flowData.nodeCounter || 1);
+
+          // ファイル名を抽出
+          const fileNameOnly = filePath
+            .split(/[\\/]/)
+            .pop()
+            .replace(/\.[^/.]+$/, "");
+
+          // ファイル状態を更新
+          setCurrentFilePath(filePath);
+          setDisplayFileName(fileNameOnly);
+          setHasUnsavedChanges(false);
+
+          // 履歴をリセット
+          setHistory([]);
+          setCurrentHistoryIndex(-1);
+
+          ConsoleMsg("success", `ファイルを開きました: ${fileNameOnly}`);
+        } else {
+          ConsoleMsg("error", "無効なファイル形式です");
+        }
+      }
+    } catch (error) {
+      ConsoleMsg("error", `ファイルを開く際にエラーが発生しました: ${error.message}`);
+      console.error("ファイルオープンエラー:", error);
+    }
+  }, [hasUnsavedChanges, setNodes, setEdges, setNodeCounter]);
+
+  /**
+   * 新規ファイル作成
+   */
+  const newFlow = useCallback(() => {
+    if (hasUnsavedChanges) {
+      const result = confirm("未保存の変更があります。新規ファイルを作成しますか？");
+      if (!result) return;
+    }
+
+    // フローをリセット
+    setNodes([]);
+    setEdges([]);
+    setNodeCounter(1);
+
+    // ファイル状態をリセット
+    setCurrentFilePath(null);
+    setDisplayFileName("未保存のフロー");
+    setHasUnsavedChanges(false);
+
+    // 履歴もリセット
+    setHistory([]);
+    setCurrentHistoryIndex(-1);
+
+    ConsoleMsg("info", "新規フローを作成しました");
+  }, [hasUnsavedChanges, setNodes, setEdges, setNodeCounter]);
+
+  // ファイル操作のキーボードショートカット設定
+  useEffect(() => {
+    const handleFileKeyDown = (event) => {
+      // Ctrl+S（保存）
+      if (event.ctrlKey && event.key === "s" && !event.shiftKey) {
+        event.preventDefault();
+        saveFlow();
+      }
+      // Ctrl+Shift+S（名前をつけて保存）
+      else if (event.ctrlKey && event.shiftKey && event.key === "S") {
+        event.preventDefault();
+        saveAsFlow();
+      }
+      // Ctrl+N（新規ファイル）
+      else if (event.ctrlKey && event.key === "n") {
+        event.preventDefault();
+        newFlow();
+      }
+      // Ctrl+O（ファイルを開く）
+      else if (event.ctrlKey && event.key === "o") {
+        event.preventDefault();
+        openFlow();
+      }
+    };
+
+    document.addEventListener("keydown", handleFileKeyDown);
+    return () => document.removeEventListener("keydown", handleFileKeyDown);
+  }, [saveFlow, saveAsFlow, newFlow, openFlow]);
+
+  // 変更状態の追跡
+  useEffect(() => {
+    // 履歴が変更されたら未保存状態にする
+    if (history.length > 0 && !hasUnsavedChanges) {
+      setHasUnsavedChanges(true);
+    }
+  }, [history.length, hasUnsavedChanges]);
+
+  // ========================================================================================
   // コピー・ペースト機能
   // ========================================================================================
 
@@ -609,6 +933,16 @@ export const useFlowEditor = (initialMode = "default") => {
     canRedo: currentHistoryIndex < history.length - 1,
     historyLength: history.length,
     currentHistoryIndex,
+
+    // ファイル保存
+    saveFlow,
+    saveAsFlow,
+    openFlow,
+    newFlow,
+    exportFlowData,
+    currentFilePath,
+    fileName: displayFileName,
+    hasUnsavedChanges,
 
     // ユーティリティ
     screenToFlowPosition,
