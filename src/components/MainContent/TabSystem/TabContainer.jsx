@@ -3,6 +3,7 @@ import { useTabManager } from "./hooks/useTabManager";
 import TabHeader from "./TabHeader";
 import TabContent from "./TabContent";
 import Welcome from "../Welcome/Welcome";
+import { NodeDiagramIcon } from "../Icons";
 
 /**
  * タブシステムのメインコンテナコンポーネント
@@ -14,10 +15,13 @@ function TabContainer({ initialTabs }) {
   const handleCreateNewFlow = () => {
     addTab({
       id: `flow-editor-${Date.now()}`,
-      title: "新しいフロー",
-      icon: "🔄",
+      title: "新しいノード",
+      icon: "⧈", // ノードダイアグラムを表現する記号
       component: "FlowEditor",
       closable: true,
+      props: {
+        initialMode: "empty", // 空のフローで開始
+      },
     });
   };
 

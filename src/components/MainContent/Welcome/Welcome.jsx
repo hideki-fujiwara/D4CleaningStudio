@@ -10,6 +10,7 @@
  * @version 1.0.0
  */
 import React from "react";
+import { NodeDiagramIcon } from "../Icons";
 
 /**
  * ウェルカムコンポーネント
@@ -33,12 +34,14 @@ const Welcome = ({ onCreateNewFlow, onOpenProject, onOpenSample }) => {
 
         {/* クイックアクション */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* 新しいフロー */}
+          {/* 新しいノード */}
           <div className="card bg-base-200 border border-base-300 hover:border-primary transition-colors cursor-pointer" onClick={onCreateNewFlow}>
             <div className="card-body p-6">
-              <div className="text-3xl mb-3">🔄</div>
-              <h3 className="card-title text-lg mb-2">新しいフロー</h3>
-              <p className="text-sm text-base-content/70">新しいデータ処理フローを作成します</p>
+              <div className="flex justify-center mb-3">
+                <NodeDiagramIcon className="w-12 h-12" />
+              </div>
+              <h3 className="card-title text-lg mb-2">新しいノード</h3>
+              <p className="text-sm text-base-content/70">新しいノードエディタを作成します</p>
             </div>
           </div>
 

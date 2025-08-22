@@ -1,9 +1,9 @@
 /**
  * ================================================================
- * FlowEditor用アイコンコンポーネント定義
+ * アイコンコンポーネント定義
  * ================================================================
  *
- * FlowEditorのツールバーで使用するすべてのSVGアイコンを定義
+ * アプリケーション全体で使用するすべてのSVGアイコンを定義
  * 各アイコンはカラーとサイズをプロパティで制御可能
  *
  * @author D4CleaningStudio
@@ -36,12 +36,7 @@ const BaseIcon = ({ children, className = "w-4 h-4", color = "currentColor", ...
  */
 export const SaveIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
   <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      strokeWidth={2} 
-      d="M7 3v6h10V3M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM9 3v6m0 8h6m-6 4v-4m6 4v-4" 
-    />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 3v6h10V3M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM9 3v6m0 8h6m-6 4v-4m6 4v-4" />
   </svg>
 );
 
@@ -52,12 +47,7 @@ export const SaveIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
  */
 export const SaveAsIcon = ({ className = "w-4 h-4 text-[color:var(--color-warning)]", color }) => (
   <svg className={className} fill="none" stroke={color || "currentColor"} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      strokeWidth={2} 
-      d="M7 3v6h10V3M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM9 3v6m0 8h6m-6 4v-4m6 4v-4" 
-    />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 3v6h10V3M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM9 3v6m0 8h6m-6 4v-4m6 4v-4" />
   </svg>
 );
 
@@ -98,8 +88,12 @@ export const RedoIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
  * キーボードショートカット: F5
  */
 export const PlayIcon = ({ className = "w-4 h-4", color = "#22c55e" }) => (
-  <svg className={className} fill={color} viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+  <svg className={className} fill={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path
+      fillRule="evenodd"
+      d="M12 21.6a9.6 9.6 0 100-19.2 9.6 9.6 0 000 19.2zM11.466 8.6016A1.2 1.2 0 009.6 9.6v4.8a1.2 1.2 0 001.866.9984l3.6-2.4a1.2 1.2 0 000-1.9968l-3.6-2.4z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
@@ -322,4 +316,102 @@ export const getFileIcon = (filename) => {
  *
  * 【ユーティリティ】
  * - getFileIcon: ファイルアイコン選択関数
+ * - NodeDiagramIcon: ノードダイアグラムアイコン
+ *
+ * 【プロジェクトツリー】
+ * - FileIcon: ファイルアイコン
+ * - FolderIcon: フォルダアイコン（閉じた状態）
+ * - FolderOpenIcon: フォルダアイコン（開いた状態）
+ * - ChevronRightIcon: シェブロン右アイコン
+ * - PlusIcon: プラスアイコン
+ * - FolderPlusIcon: フォルダ追加アイコン
+ * - CollapseIcon: 折りたたみアイコン
  */
+
+/**
+ * ノードダイアグラムアイコン
+ * ノードエディタやフローダイアグラムを表現
+ */
+export const NodeDiagramIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20.25,16.5a2.236,2.236,0,0,0-1.528.608l-3.003-1.802a1.532,1.532,0,0,0,0-.613l3.003-1.802A2.243,2.243,0,1,0,18,11.25a2.201,2.201,0,0,0,.031.307l-3.003,1.802a2.25,2.25,0,1,0,0,3.283l3.003,1.802A2.201,2.201,0,0,0,18,18.75a2.25,2.25,0,1,0,2.25-2.25Zm0-6a.75.75,0,1,1-.75.75A.756.756,0,0,1,20.25,10.5ZM13.5,15.75a.75.75,0,1,1,.75-.75A.756.756,0,0,1,13.5,15.75Zm6.75,3.75a.75.75,0,1,1,.75-.75A.756.756,0,0,1,20.25,19.5Z" />
+    <circle cx="5.25" cy="6" r="0.75" />
+    <circle cx="5.25" cy="12" r="0.75" />
+    <circle cx="5.25" cy="18" r="0.75" />
+    <path d="M16.5,9.75V3.75a1.502,1.502,0,0,0-1.5-1.5H3A1.502,1.502,0,0,0,1.5,3.75V20.25A1.502,1.502,0,0,0,3,21.75H15V20.25H3V15.75h6V14.25H3V9.75ZM3,3.75H15v4.5H3Z" />
+  </svg>
+);
+
+// ================================================================
+// プロジェクトツリー関連アイコン
+// ================================================================
+
+/**
+ * ファイルアイコン
+ * プロジェクトツリーでファイルを表現
+ */
+export const FileIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+  </svg>
+);
+
+/**
+ * フォルダアイコン（閉じた状態）
+ * プロジェクトツリーで閉じたフォルダを表現
+ */
+export const FolderIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+  </svg>
+);
+
+/**
+ * フォルダアイコン（開いた状態）
+ * プロジェクトツリーで開いたフォルダを表現
+ */
+export const FolderOpenIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
+  </svg>
+);
+
+/**
+ * シェブロン右アイコン
+ * プロジェクトツリーで展開可能な項目を表現
+ */
+export const ChevronRightIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+);
+
+/**
+ * プラスアイコン
+ * 新しい項目の追加を表現
+ */
+export const PlusIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+  </svg>
+);
+
+/**
+ * フォルダ追加アイコン
+ * 新しいフォルダの作成を表現
+ */
+export const FolderPlusIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+  </svg>
+);
+
+/**
+ * 折りたたみアイコン
+ * ツリー全体の折りたたみを表現
+ */
+export const CollapseIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+  </svg>
+);

@@ -10,9 +10,11 @@ function TabContent({ selectedTab, onSelectionChange, openTabs }) {
    * タブの内容をレンダリングする
    */
   const renderTabContent = (tab) => {
+    console.log("TabContent renderTabContent tab:", tab);
     switch (tab.component) {
       case "FlowEditor":
-        return <FlowEditor />;
+        console.log("Rendering FlowEditor with initialMode:", tab.props?.initialMode);
+        return <FlowEditor initialMode={tab.props?.initialMode} />;
 
       case "DataViewer":
         return (

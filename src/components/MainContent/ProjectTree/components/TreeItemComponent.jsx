@@ -15,7 +15,7 @@
  */
 import React, { memo, useMemo } from "react";
 import { TreeItem, TreeItemContent, Button, Collection } from "react-aria-components";
-import { getFileIcon, ChevronRightIcon, PlusIcon, FolderPlusIcon, RefreshIcon, CollapseIcon } from "../icons";
+import { getFileIcon, ChevronRightIcon, PlusIcon, FolderPlusIcon, ResetIcon as RefreshIcon, CollapseIcon } from "../../Icons";
 import { TREE_ITEM_STYLES, CHEVRON_STYLES, TOOLBAR_STYLES } from "../constants";
 import { useTreeItemDrag } from "./useDragAndDrop";
 import ToolButton from "./ToolButton";

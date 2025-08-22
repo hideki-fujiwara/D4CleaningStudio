@@ -217,15 +217,34 @@ const initialEdges = [
  *
  * ReactFlowProvider内で実行されるため、useReactFlowフックが使用可能。
  * ノードやエッジの状態管理、ドラッグ&ドロップ処理、各種イベントハンドリングを担当。
+ *
+ * @param {Object} props - プロパティ
+ * @param {string} props.initialMode - 初期モード（"default" | "empty"）
  */
-function FlowEditorInner() {
+function FlowEditorInner({ initialMode = "default" }) {
+  // デバッグ用
+  console.log("FlowEditorInner initialMode:", initialMode);
+  
   // ========================================================================================
   // 状態管理
   // ========================================================================================
 
+  // 初期ノードとエッジを決定
+  const getInitialNodes = () => {
+    const nodes = initialMode === "empty" ? [] : initialNodes;
+    console.log("getInitialNodes:", nodes.length, "nodes");
+    return nodes;
+  };
+
+  const getInitialEdges = () => {
+    const edges = initialMode === "empty" ? [] : initialEdges;
+    console.log("getInitialEdges:", edges.length, "edges");
+    return edges;
+  };
+
   // React Flow状態管理（ノードとエッジ）
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(getInitialNodes());
+  const [edges, setEdges, onEdgesChange] = useEdgesState(getInitialEdges());
 
   // React Flowのユーティリティ関数（座標変換用）
   const { screenToFlowPosition } = useReactFlow();
@@ -837,11 +856,14 @@ function FlowEditorInner() {
  * 子コンポーネントで使用可能にするためのコンテキストプロバイダー。
  * FlowEditorInnerコンポーネントでuseReactFlowを使用するため、
  * このラッパーが必要。
+ *
+ * @param {Object} props - プロパティ
+ * @param {string} props.initialMode - 初期モード（"default" | "empty"）
  */
-function FlowEditor() {
+function FlowEditor({ initialMode = "default" }) {
   return (
     <ReactFlowProvider>
-      <FlowEditorInner />
+      <FlowEditorInner initialMode={initialMode} />
     </ReactFlowProvider>
   );
 }
