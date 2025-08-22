@@ -4,7 +4,7 @@
 import { useDrag, useDrop } from "react-aria";
 import { useRef } from "react";
 import { DRAG_DROP_TYPES, FILE_TYPES } from "../constants";
-import ConsoleMsg from "../../../utils/ConsoleMsg";
+import ConsoleMsg from "../../../../utils/ConsoleMsg";
 
 /**
  * ドラッグ機能のフック

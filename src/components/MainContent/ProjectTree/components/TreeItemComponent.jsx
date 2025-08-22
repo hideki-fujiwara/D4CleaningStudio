@@ -19,7 +19,7 @@ import { getFileIcon, ChevronRightIcon, PlusIcon, FolderPlusIcon, RefreshIcon, C
 import { TREE_ITEM_STYLES, CHEVRON_STYLES, TOOLBAR_STYLES } from "../constants";
 import { useTreeItemDrag } from "./useDragAndDrop";
 import ToolButton from "./ToolButton";
-import ConsoleMsg from "../../../utils/ConsoleMsg";
+import ConsoleMsg from "../../../../utils/ConsoleMsg";
 
 /**
  * ツリーアイテムコンポーネント（リファクタリング版）

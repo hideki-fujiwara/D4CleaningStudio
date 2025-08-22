@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import ConsoleMsg from "../../utils/ConsoleMsg";
 import { loadMainPanelLayout, saveMainPanelLayout } from "../../utils/StoreManager";
-import ProjectTree from "../ProjectTree/ProjectTree";
+import ProjectTree from "./ProjectTree/ProjectTree";
 import TabContainer from "./TabSystem/TabContainer";
 
 /**

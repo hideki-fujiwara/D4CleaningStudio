@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { readDir } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
-import ConsoleMsg from "../../../utils/ConsoleMsg";
-import { loadStore } from "../../../utils/StoreManager";
+import ConsoleMsg from "../../../../utils/ConsoleMsg";
+import { loadStore } from "../../../../utils/StoreManager";
 import { DEFAULT_PROJECT_NAME, INITIAL_EXPANDED_KEYS } from "../constants";
 
 /**
