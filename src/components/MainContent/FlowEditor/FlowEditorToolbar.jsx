@@ -137,14 +137,14 @@ const FileOperationsGroup = () => (
       tooltip="保存 (Ctrl+S)"
       isDisabled={false} // TODO: 保存機能実装時の制御
     >
-      <SaveIcon className={BUTTON_STYLES.iconSize} color="currentColor" />
+      <SaveIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
     <TooltipButton
       tooltip="別名で保存 (Ctrl+Shift+S)"
       isDisabled={false} // TODO: 別名保存機能実装時の制御
     >
-      <SaveAsIcon className={BUTTON_STYLES.iconSize} color="currentColor" />
+      <SaveAsIcon className={`${BUTTON_STYLES.iconSize} text-[color:var(--color-warning)]`} />
     </TooltipButton>
   </Group>
 );
@@ -159,14 +159,14 @@ const EditOperationsGroup = () => (
       tooltip="元に戻す (Ctrl+Z)"
       isDisabled={true} // TODO: Undo機能実装時にfalseに
     >
-      <UndoIcon className={BUTTON_STYLES.iconSize} color="currentColor" />
+      <UndoIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
     <TooltipButton
       tooltip="やり直し (Ctrl+Y)"
       isDisabled={true} // TODO: Redo機能実装時にfalseに
     >
-      <RedoIcon className={BUTTON_STYLES.iconSize} color="currentColor" />
+      <RedoIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
   </Group>
 );
@@ -181,14 +181,14 @@ const ExecutionGroup = () => (
       tooltip="フローを実行 (F5)"
       isDisabled={true} // TODO: フロー実行機能実装時にfalseに
     >
-      <PlayIcon className={BUTTON_STYLES.iconSize} color="#22c55e" />
+      <PlayIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
     <TooltipButton
       tooltip="ステップ実行 (F10)"
       isDisabled={true} // TODO: ステップ実行機能実装時にfalseに
     >
-      <StepIcon className={BUTTON_STYLES.iconSize} color="currentColor" />
+      <StepIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
   </Group>
 );
@@ -200,11 +200,11 @@ const ExecutionGroup = () => (
 const ViewSettingsGroup = () => (
   <Group className="flex items-center gap-1">
     <TooltipToggleButton tooltip="グリッド表示を切り替え" defaultPressed={true}>
-      <GridIcon className={BUTTON_STYLES.iconSize} color="currentColor" />
+      <GridIcon className={BUTTON_STYLES.iconSize} />
     </TooltipToggleButton>
 
     <TooltipToggleButton tooltip="スナップ機能を切り替え" defaultPressed={false}>
-      <SnapIcon className={BUTTON_STYLES.iconSize} color="currentColor" />
+      <SnapIcon className={BUTTON_STYLES.iconSize} />
     </TooltipToggleButton>
   </Group>
 );
@@ -221,15 +221,15 @@ const ViewSettingsGroup = () => (
 const NodeAdditionGroup = ({ addTextNode, addSimpleNode, addCsvNode }) => (
   <Group className="flex items-center gap-1">
     <TooltipButton tooltip="テキストノードを追加" onPress={addTextNode}>
-      <TextIcon className={BUTTON_STYLES.iconSize} color="currentColor" />
+      <TextIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
     <TooltipButton tooltip="シンプルノードを追加" onPress={addSimpleNode}>
-      <NodeIcon className={BUTTON_STYLES.iconSize} color="currentColor" />
+      <NodeIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
     <TooltipButton tooltip="CSVノードを追加" onPress={addCsvNode}>
-      <CsvIcon className={BUTTON_STYLES.iconSize} color="currentColor" />
+      <CsvIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
   </Group>
 );
@@ -245,7 +245,7 @@ const NodeAdditionGroup = ({ addTextNode, addSimpleNode, addCsvNode }) => (
 const FlowOperationsGroup = ({ resetFlow, clearNodes }) => (
   <Group className="flex items-center gap-1">
     <TooltipButton tooltip="フローを初期状態にリセット" onPress={resetFlow}>
-      <ResetIcon className={BUTTON_STYLES.iconSize} color="currentColor" />
+      <ResetIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
     <TooltipButton
@@ -258,7 +258,7 @@ const FlowOperationsGroup = ({ resetFlow, clearNodes }) => (
       }
       onPress={clearNodes}
     >
-      <TrashIcon className={BUTTON_STYLES.iconSize} color="#ef4444" />
+      <TrashIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
   </Group>
 );

@@ -31,23 +31,33 @@ const BaseIcon = ({ children, className = "w-4 h-4", color = "currentColor", ...
 
 /**
  * 保存アイコン
- * ファイルの保存機能を表現
+ * ファイルの保存機能を表現（フロッピーディスク）
  * キーボードショートカット: Ctrl+S
  */
 export const SaveIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
   <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
+    <path 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      strokeWidth={2} 
+      d="M7 3v6h10V3M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM9 3v6m0 8h6m-6 4v-4m6 4v-4" 
+    />
   </svg>
 );
 
 /**
  * 別名で保存アイコン
- * ファイルの別名保存機能を表現
+ * ファイルの別名保存機能を表現（フロッピーディスク・ワーニング色）
  * キーボードショートカット: Ctrl+Shift+S
  */
-export const SaveAsIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
-  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+export const SaveAsIcon = ({ className = "w-4 h-4 text-[color:var(--color-warning)]", color }) => (
+  <svg className={className} fill="none" stroke={color || "currentColor"} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      strokeWidth={2} 
+      d="M7 3v6h10V3M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM9 3v6m0 8h6m-6 4v-4m6 4v-4" 
+    />
   </svg>
 );
 
