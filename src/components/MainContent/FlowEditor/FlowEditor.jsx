@@ -9,8 +9,8 @@
  * @author D4CleaningStudio
  * @version 2.0.0 (Refactored)
  */
-import React from "react";
-import ReactFlow, { MiniMap, Controls, Background, ConnectionLineType, Panel, ReactFlowProvider } from "reactflow";
+import React, { useState, useCallback } from "react";
+import ReactFlow, { MiniMap, Controls, Background, ConnectionLineType, Panel, ReactFlowProvider, useReactFlow } from "reactflow";
 import "reactflow/dist/style.css";
 import { nodeTypes } from "./CustomNodes";
 import FlowEditorToolbar from "./FlowEditorToolbar";
@@ -36,9 +36,51 @@ function FlowEditorInner({ initialMode }) {
   // ドラッグ&ドロップ（HTML5版）
   const { reactFlowWrapper, isDragOver, onDrop, onDragOver, onDragLeave } = useHtmlDragAndDrop(addNode);
 
+  // React Flowのズーム情報を取得
+  const { getZoom, setViewport, getViewport } = useReactFlow();
+  const [zoom, setZoom] = useState(1);
+  const [isZoomDisabled, setIsZoomDisabled] = useState(false);
+
+  // ズーム変更時のコールバック
+  const onMove = useCallback(() => {
+    setZoom(getZoom());
+  }, [getZoom]);
+
+  // ズーム無効状態変更ハンドラー
+  const handleZoomDisableChange = useCallback((disabled) => {
+    console.log("ズーム制御状態変更:", disabled ? "ズーム無効" : "ズーム有効");
+    setIsZoomDisabled(disabled);
+  }, []);
+
+  // ズーム率変更ハンドラー（スライダー用）
+  const handleZoomChange = useCallback(
+    (newZoom) => {
+      if (!isZoomDisabled) {
+        const currentViewport = getViewport();
+        setViewport({
+          x: currentViewport.x,
+          y: currentViewport.y,
+          zoom: newZoom,
+        });
+        setZoom(newZoom);
+        console.log("スライダーでズーム変更:", Math.round(newZoom * 100) + "%");
+      }
+    },
+    [isZoomDisabled, getViewport, setViewport]
+  );
+
   // ========================================================================================
   // レンダリング
   // ========================================================================================
+
+  // デバッグ用ログ
+  console.log("FlowEditor レンダリング:", {
+    isZoomDisabled,
+    zoomOnScroll: !isZoomDisabled,
+    zoomOnPinch: !isZoomDisabled,
+    zoomOnDoubleClick: !isZoomDisabled,
+    showZoom: !isZoomDisabled,
+  });
 
   return (
     <div className="h-full flex flex-col bg-gray-100">
@@ -51,6 +93,10 @@ function FlowEditorInner({ initialMode }) {
         onClearAll={onClearAll}
         nodeCount={nodeCount}
         edgeCount={edgeCount}
+        zoom={zoom}
+        isZoomDisabled={isZoomDisabled}
+        onZoomDisableChange={handleZoomDisableChange}
+        onZoomChange={handleZoomChange}
       />
 
       {/* メインフローエリア */}
@@ -61,20 +107,34 @@ function FlowEditorInner({ initialMode }) {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onMove={onMove}
           nodeTypes={nodeTypes}
           connectionLineType={ConnectionLineType.SmoothStep}
-          className={`bg-base-100 transition-all duration-300 ${isDragOver ? "ring-2 ring-primary ring-inset" : ""}`}
+          className={`bg-base-100 transition-all duration-300 ${isDragOver ? "ring-2 ring-primary ring-inset" : ""} ${isZoomDisabled ? "cursor-not-allowed" : ""}`}
+          zoomOnScroll={!isZoomDisabled}
+          zoomOnPinch={!isZoomDisabled}
+          zoomOnDoubleClick={!isZoomDisabled}
+          panOnScroll={true}
+          panOnScrollMode="free"
           proOptions={{
-            hideAttribution: true, // React Flowのクレジット表示を隠す
+            hideAttribution: true, // クレジット非表示
+            hideDevTools: true, // DevTools無効化
+            account: "paid-pro", // Proアカウント設定
           }}
           fitView
           attributionPosition="bottom-left"
         >
           {/* 背景グリッド */}
-          <Background variant="dots" gap={20} size={1} color="#cbd5e1" />
+          <Background variant="dots" gap={20} size={1} color={isZoomDisabled ? "#e2e8f0" : "#cbd5e1"} />
 
           {/* ズーム・パンコントロール */}
-          <Controls position="bottom-right" className="bg-base-100 shadow-lg rounded-lg border border-base-300" />
+          <Controls
+            position="bottom-right"
+            className="bg-base-100 shadow-lg rounded-lg border border-base-300"
+            showZoom={!isZoomDisabled}
+            showFitView={!isZoomDisabled}
+            showInteractive={!isZoomDisabled}
+          />
 
           {/* ミニマップ */}
           <MiniMap
@@ -83,6 +143,13 @@ function FlowEditorInner({ initialMode }) {
             nodeColor="#6366f1"
             maskColor="rgba(0, 0, 0, 0.1)"
           />
+
+          {/* ズーム無効時のオーバーレイ */}
+          {isZoomDisabled && (
+            <Panel position="top-right" className="pointer-events-none">
+              <div className="bg-orange-100 border border-orange-300 rounded-lg p-2 text-orange-800 text-sm font-medium shadow-lg">🔒 ズーム操作が無効です</div>
+            </Panel>
+          )}
 
           {/* ドラッグ&ドロップヒント */}
           {isDragOver && (

@@ -11,7 +11,22 @@
  * @version 1.0.0
  */
 import React from "react";
-import { Button, Group, Separator, ToggleButton, Toolbar as AriaToolbar, OverlayArrow, Tooltip, TooltipTrigger } from "react-aria-components";
+import {
+  Button,
+  Group,
+  Separator,
+  ToggleButton,
+  Toolbar as AriaToolbar,
+  OverlayArrow,
+  Tooltip,
+  TooltipTrigger,
+  Checkbox,
+  Slider,
+  SliderOutput,
+  SliderThumb,
+  SliderTrack,
+  Label,
+} from "react-aria-components";
 import {
   SaveIcon, // 保存
   SaveAsIcon, // 別名で保存
@@ -45,7 +60,7 @@ const TOOLTIP_CONFIG = {
  * ツールチップのスタイル設定
  */
 const TOOLTIP_STYLES = {
-  base: "bg-base-content text-base-100 px-2 py-1 rounded text-sm shadow-lg z-50",
+  base: "bg-base-content text-base-100 px-2 py-1 rounded text-sm shadow-lg z-[9999]",
   arrow: "fill-base-content",
   defaultSize: 6, // デフォルトの矢印サイズ
 };
@@ -63,18 +78,6 @@ const BUTTON_STYLES = {
 // ================================================================
 // ツールチップ用の矢印コンポーネント
 // ================================================================
-
-/**
- * ツールチップ用の矢印アイコン
- * react-aria-componentsのOverlayArrowで使用
- */
-const TooltipArrow = () => (
-  <OverlayArrow>
-    <svg width={TOOLTIP_STYLES.defaultSize} height={TOOLTIP_STYLES.defaultSize} viewBox={`0 0 ${TOOLTIP_STYLES.defaultSize} ${TOOLTIP_STYLES.defaultSize}`} className={TOOLTIP_STYLES.arrow}>
-      <path d={`m0 0 ${TOOLTIP_STYLES.defaultSize / 2} ${TOOLTIP_STYLES.defaultSize / 2} ${TOOLTIP_STYLES.defaultSize / 2}-${TOOLTIP_STYLES.defaultSize / 2}Z`} />
-    </svg>
-  </OverlayArrow>
-);
 
 // ================================================================
 // ツールチップ付きボタンコンポーネント
@@ -97,7 +100,11 @@ const TooltipButton = ({ children, tooltip, onPress, isDisabled = false, classNa
     </Button>
     <Tooltip className={TOOLTIP_STYLES.base} offset={TOOLTIP_CONFIG.offset}>
       {tooltip}
-      <TooltipArrow />
+      <OverlayArrow>
+        <svg width={6} height={6} viewBox="0 0 6 6" className="fill-base-content">
+          <path d="m0 0 3 3 3-3Z" />
+        </svg>
+      </OverlayArrow>
     </Tooltip>
   </TooltipTrigger>
 );
@@ -118,7 +125,11 @@ const TooltipToggleButton = ({ children, tooltip, defaultPressed = false, classN
     </ToggleButton>
     <Tooltip className={TOOLTIP_STYLES.base} offset={TOOLTIP_CONFIG.offset}>
       {tooltip}
-      <TooltipArrow />
+      <OverlayArrow>
+        <svg width={6} height={6} viewBox="0 0 6 6" className="fill-base-content">
+          <path d="m0 0 3 3 3-3Z" />
+        </svg>
+      </OverlayArrow>
     </Tooltip>
   </TooltipTrigger>
 );
@@ -132,30 +143,18 @@ const TooltipToggleButton = ({ children, tooltip, defaultPressed = false, classN
  * @param {React.ReactNode} props.children - アイコンコンテンツ
  */
 const DraggableNodeItem = ({ nodeType, tooltip, children, className = BUTTON_STYLES.default }) => {
-  console.log(`🟢 DraggableNodeItem レンダリング: ${nodeType}`);
-
   return (
-    <TooltipTrigger delay={TOOLTIP_CONFIG.delay} closeDelay={TOOLTIP_CONFIG.closeDelay}>
-      <div 
-        className={`${className} cursor-grab active:cursor-grabbing`}
-        draggable={true}
-        onDragStart={(e) => {
-          console.log(`🟢 HTML5 onDragStart: ${nodeType}`, e);
-          e.dataTransfer.setData("application/reactflow", nodeType);
-          e.dataTransfer.setData("text/plain", nodeType);
-          e.dataTransfer.effectAllowed = "copy";
-        }}
-        onDragEnd={(e) => {
-          console.log(`🟢 HTML5 onDragEnd: ${nodeType}`, e);
-        }}
-      >
-        {children}
-      </div>
-      <Tooltip className={TOOLTIP_STYLES.base} offset={TOOLTIP_CONFIG.offset}>
-        {tooltip}
-        <TooltipArrow />
-      </Tooltip>
-    </TooltipTrigger>
+    <div
+      className={`${className} cursor-grab active:cursor-grabbing`}
+      draggable={true}
+      onDragStart={(e) => {
+        e.dataTransfer.setData("application/reactflow", nodeType);
+        e.dataTransfer.setData("text/plain", nodeType);
+        e.dataTransfer.effectAllowed = "copy";
+      }}
+    >
+      {children}
+    </div>
   );
 };
 
@@ -231,9 +230,15 @@ const ExecutionGroup = () => (
 
 /**
  * 表示設定グループ
- * グリッド表示、スナップ機能の切り替えを提供
+ * グリッド表示、スナップ機能、ズーム制御の切り替えを提供
+ *
+ * @param {Object} props - プロパティ
+ * @param {boolean} props.isZoomDisabled - ズーム機能の無効状態
+ * @param {function} props.onZoomDisableChange - ズーム無効状態変更ハンドラー
+ * @param {number} props.zoom - 現在のズーム率
+ * @param {function} props.onZoomChange - ズーム率変更ハンドラー
  */
-const ViewSettingsGroup = () => (
+const ViewSettingsGroup = ({ isZoomDisabled = false, onZoomDisableChange, zoom = 1, onZoomChange }) => (
   <Group className="flex items-center gap-1">
     <TooltipToggleButton tooltip="グリッド表示を切り替え" defaultPressed={true}>
       <GridIcon className={BUTTON_STYLES.iconSize} />
@@ -242,6 +247,39 @@ const ViewSettingsGroup = () => (
     <TooltipToggleButton tooltip="スナップ機能を切り替え" defaultPressed={false}>
       <SnapIcon className={BUTTON_STYLES.iconSize} />
     </TooltipToggleButton>
+
+    {/* セパレーター */}
+    <div className="w-px h-4 bg-base-300 mx-1" />
+
+    {/* ズーム制御チェックボックス */}
+    <div className="flex items-center gap-0.5 px-2 py-1 rounded hover:bg-base-300 transition-colors cursor-pointer">
+      <Checkbox isSelected={isZoomDisabled} onChange={onZoomDisableChange} className="flex items-center gap-0.5">
+        <div className="w-4 h-4 border border-base-400 rounded bg-base-100 flex items-center justify-center data-[selected]:bg-primary data-[selected]:border-primary transition-colors">
+          {isZoomDisabled && (
+            <svg className="w-3 h-3 text-primary-content" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+          )}
+        </div>
+        <span className="text-sm text-base-content">{isZoomDisabled ? "🔒" : "🔓"}</span>
+      </Checkbox>
+      <Slider value={zoom * 100} onChange={(value) => onZoomChange && onZoomChange(value / 100)} minValue={25} maxValue={300} step={5} isDisabled={isZoomDisabled} className="w-36 flex items-center">
+        <div className="flex items-center w-full relative">
+          <SliderTrack className="w-full h-2 bg-base-300 rounded-full relative overflow-visible cursor-pointer">
+            <div className="h-full bg-primary rounded-full transition-all duration-200 ease-out" style={{ width: `${((zoom * 100 - 25) / (300 - 25)) * 100}%` }} />
+          </SliderTrack>
+          <SliderThumb
+            className="w-5 h-5 bg-white border-2 border-primary rounded-full shadow-lg cursor-grab active:cursor-grabbing focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ease-out absolute"
+            style={{
+              left: `calc(${((zoom * 100 - 25) / (300 - 25)) * 100}% - 10px)`,
+              top: "50%",
+              transform: "translateY(-50%)",
+            }}
+          />
+        </div>
+        <Label className="text-sm text-base-content font-mono">{Math.round(zoom * 100)}%</Label>
+      </Slider>
+    </div>
   </Group>
 );
 
@@ -318,29 +356,39 @@ const FlowOperationsGroup = ({ onReset, onClearAll }) => (
 
 /**
  * 統計情報表示
- * ノード数、エッジ数、各種ノードタイプの統計を表示
+ * ノード数、エッジ数、ズーム率の統計を表示
  *
  * @param {Object} props - プロパティ
- * @param {Array} props.nodes - ノードの配列
- * @param {Array} props.edges - エッジの配列
+ * @param {number} props.nodeCount - ノード数
+ * @param {number} props.edgeCount - エッジ数
+ * @param {number} props.zoom - ズーム率
  */
-const StatisticsDisplay = ({ nodes, edges }) => (
+const StatisticsDisplay = ({ nodeCount, edgeCount, zoom }) => (
   <TooltipTrigger delay={TOOLTIP_CONFIG.delay} closeDelay={TOOLTIP_CONFIG.closeDelay}>
-    <div className="text-sm text-base-content/70 px-2 py-2 bg-base-100 rounded border border-base-300 cursor-help">
-      <span className="font-mono">ノード: {nodes.length}</span>
-      <span className="mx-2">|</span>
-      <span className="font-mono">エッジ: {edges.length}</span>
+    <div className="text-sm text-base-content/70 px-3 py-2 bg-base-100 rounded border border-base-300 cursor-help flex items-center gap-3">
+      <span className="font-mono">ノード: {nodeCount}</span>
+      <span className="text-base-300">|</span>
+      <span className="font-mono">エッジ: {edgeCount}</span>
+      <span className="text-base-300">|</span>
+      <span className="font-mono">倍率: {Math.round(zoom * 100)}%</span>
     </div>
     <Tooltip className={TOOLTIP_STYLES.base} offset={TOOLTIP_CONFIG.offset}>
       <div className="text-center">
-        <div className="font-semibold mb-1">フロー統計情報</div>
+        <div className="font-semibold mb-2">フロー統計情報</div>
         <div className="text-xs space-y-1">
-          <div>📝 テキスト: {nodes.filter((n) => n.type === "customText").length}</div>
-          <div>⬜ シンプル: {nodes.filter((n) => n.type === "customSimple").length}</div>
-          <div>📊 CSV: {nodes.filter((n) => n.type === "inputFileCsv").length}</div>
+          <div>� 総ノード数: {nodeCount}</div>
+          <div>🔗 総エッジ数: {edgeCount}</div>
+          <div>🔍 表示倍率: {Math.round(zoom * 100)}%</div>
+          <div className="border-t border-base-content/20 pt-1 mt-2">
+            <div>ズーム: {zoom.toFixed(2)}x</div>
+          </div>
         </div>
       </div>
-      <TooltipArrow />
+      <OverlayArrow>
+        <svg width={6} height={6} viewBox="0 0 6 6" className="fill-base-content">
+          <path d="m0 0 3 3 3-3Z" />
+        </svg>
+      </OverlayArrow>
     </Tooltip>
   </TooltipTrigger>
 );
@@ -360,8 +408,24 @@ const StatisticsDisplay = ({ nodes, edges }) => (
  * @param {function} props.onClearAll - 全ノードクリアハンドラー
  * @param {number} props.nodeCount - ノード数（統計情報用）
  * @param {number} props.edgeCount - エッジ数（統計情報用）
+ * @param {number} props.zoom - ズーム率（統計情報用）
+ * @param {boolean} props.isZoomDisabled - ズーム機能の無効状態
+ * @param {function} props.onZoomDisableChange - ズーム無効状態変更ハンドラー
+ * @param {function} props.onZoomChange - ズーム率変更ハンドラー
  */
-const FlowEditorToolbar = ({ onAddTextNode, onAddSimpleNode, onAddCsvNode, onReset, onClearAll, nodeCount = 0, edgeCount = 0 }) => {
+const FlowEditorToolbar = ({
+  onAddTextNode,
+  onAddSimpleNode,
+  onAddCsvNode,
+  onReset,
+  onClearAll,
+  nodeCount = 0,
+  edgeCount = 0,
+  zoom = 1,
+  isZoomDisabled = false,
+  onZoomDisableChange,
+  onZoomChange,
+}) => {
   return (
     <div className="bg-base-200">
       <AriaToolbar className="flex items-center px-1 py-1 gap-0">
@@ -381,7 +445,7 @@ const FlowEditorToolbar = ({ onAddTextNode, onAddSimpleNode, onAddCsvNode, onRes
         <Separator className={`w-px ${BUTTON_STYLES.separatorHeight} bg-base-300 mx-2`} />
 
         {/* 表示設定グループ */}
-        <ViewSettingsGroup />
+        <ViewSettingsGroup isZoomDisabled={isZoomDisabled} onZoomDisableChange={onZoomDisableChange} zoom={zoom} onZoomChange={onZoomChange} />
 
         <Separator className={`w-px ${BUTTON_STYLES.separatorHeight} bg-base-300 mx-2`} />
 
@@ -397,7 +461,7 @@ const FlowEditorToolbar = ({ onAddTextNode, onAddSimpleNode, onAddCsvNode, onRes
         <div className="flex-1" />
 
         {/* 統計情報 */}
-        {/* <StatisticsDisplay nodes={nodes} edges={edges} /> */}
+        <StatisticsDisplay nodeCount={nodeCount} edgeCount={edgeCount} zoom={zoom} />
       </AriaToolbar>
     </div>
   );
