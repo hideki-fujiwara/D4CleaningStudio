@@ -34,6 +34,7 @@ import {
   RedoIcon, // やり直し
   CopyIcon, // コピー
   PasteIcon, // ペースト
+  DeleteIcon, // 削除
   PlayIcon, // 実行
   StepIcon, // ステップ実行
   GridIcon, // グリッド表示
@@ -188,24 +189,22 @@ const FileOperationsGroup = () => (
 
 /**
  * 編集操作グループ
- * 元に戻す、やり直し、コピー、ペーストの機能を提供
+ * 元に戻す、やり直し、コピー、ペースト、削除の機能を提供
  *
  * @param {Object} props - プロパティ
- * @param {Object} props.copyPaste - コピー・ペースト機能のオブジェクト
+ * @param {Object} props.copyPaste - コピー・ペースト・削除機能のオブジェクト
+ * @param {Function} props.undo - Undo機能
+ * @param {Function} props.redo - Redo機能
+ * @param {boolean} props.canUndo - Undo可能かどうか
+ * @param {boolean} props.canRedo - Redo可能かどうか
  */
-const EditOperationsGroup = ({ copyPaste }) => (
+const EditOperationsGroup = ({ copyPaste, undo, redo, canUndo, canRedo }) => (
   <Group className="flex items-center gap-1">
-    <TooltipButton
-      tooltip="元に戻す (Ctrl+Z)"
-      isDisabled={true} // TODO: Undo機能実装時にfalseに
-    >
+    <TooltipButton tooltip="元に戻す (Ctrl+Z)" isDisabled={!canUndo} onPress={undo}>
       <UndoIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
-    <TooltipButton
-      tooltip="やり直し (Ctrl+Y)"
-      isDisabled={true} // TODO: Redo機能実装時にfalseに
-    >
+    <TooltipButton tooltip="やり直し (Ctrl+R)" isDisabled={!canRedo} onPress={redo}>
       <RedoIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
@@ -222,6 +221,14 @@ const EditOperationsGroup = ({ copyPaste }) => (
 
     <TooltipButton tooltip={`ノードをペースト (Ctrl+V)${copyPaste?.hasClipboard ? ` - ${copyPaste.clipboardCount}個` : ""}`} isDisabled={!copyPaste?.hasClipboard} onPress={copyPaste?.pasteNodes}>
       <PasteIcon className={BUTTON_STYLES.iconSize} />
+    </TooltipButton>
+
+    <TooltipButton
+      tooltip={`選択要素を削除 (Delete)${copyPaste?.hasSelection ? ` - ${copyPaste.selectedCount}個選択中` : ""}`}
+      isDisabled={!copyPaste?.hasSelection}
+      onPress={copyPaste?.deleteSelectedElements}
+    >
+      <DeleteIcon className={`${BUTTON_STYLES.iconSize} text-red-600 hover:text-red-700`} />
     </TooltipButton>
   </Group>
 );
@@ -376,13 +383,13 @@ const FlowOperationsGroup = ({ onReset, onClearAll }) => (
 
 /**
  * 統計情報表示
- * ノード数、エッジ数、ズーム率、コピー・ペースト状態の統計を表示
+ * ノード数、エッジ数、ズーム率、コピー・ペースト・削除状態の統計を表示
  *
  * @param {Object} props - プロパティ
  * @param {number} props.nodeCount - ノード数
  * @param {number} props.edgeCount - エッジ数
  * @param {number} props.zoom - ズーム率
- * @param {Object} props.copyPaste - コピー・ペースト状態
+ * @param {Object} props.copyPaste - コピー・ペースト・削除状態
  */
 const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste }) => (
   <TooltipTrigger delay={TOOLTIP_CONFIG.delay} closeDelay={TOOLTIP_CONFIG.closeDelay}>
@@ -419,6 +426,7 @@ const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste }) => (
                 <div>📋 クリップボード: {copyPaste.clipboardCount}</div>
                 {copyPaste.hasSelection && <div className="text-green-400">Ctrl+C でコピー可能</div>}
                 {copyPaste.hasClipboard && <div className="text-blue-400">Ctrl+V でペースト可能</div>}
+                {copyPaste.hasSelection && <div className="text-red-400">Delete で削除可能</div>}
               </div>
             </>
           )}
@@ -455,7 +463,7 @@ const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste }) => (
  * @param {boolean} props.isZoomDisabled - ズーム機能の無効状態
  * @param {function} props.onZoomDisableChange - ズーム無効状態変更ハンドラー
  * @param {function} props.onZoomChange - ズーム率変更ハンドラー
- * @param {Object} props.copyPaste - コピー・ペースト機能のオブジェクト
+ * @param {Object} props.copyPaste - コピー・ペースト・削除機能のオブジェクト
  */
 const FlowEditorToolbar = ({
   onAddTextNode,
@@ -470,6 +478,11 @@ const FlowEditorToolbar = ({
   onZoomDisableChange,
   onZoomChange,
   copyPaste,
+  // 履歴管理
+  undo,
+  redo,
+  canUndo = false,
+  canRedo = false,
 }) => {
   return (
     <div className="bg-base-200">
@@ -480,7 +493,7 @@ const FlowEditorToolbar = ({
         <Separator className={`w-px ${BUTTON_STYLES.separatorHeight} bg-base-300 mx-2`} />
 
         {/* 編集操作グループ */}
-        <EditOperationsGroup copyPaste={copyPaste} />
+        <EditOperationsGroup copyPaste={copyPaste} undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo} />
 
         <Separator className={`w-px ${BUTTON_STYLES.separatorHeight} bg-base-300 mx-2`} />
 

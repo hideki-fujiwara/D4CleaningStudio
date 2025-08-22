@@ -30,9 +30,30 @@ function FlowEditorInner({ initialMode }) {
   // カスタムフック使用
   // ========================================================================================
 
-  // メインロジック（状態管理、ノード操作）
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onAddTextNode, onAddSimpleNode, onAddCsvNode, onReset, onClearAll, nodeCount, edgeCount, addNode, copyPaste } =
-    useFlowEditor(initialMode);
+  // メインロジック（状態管理、ノード操作、履歴管理）
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    onNodeDragStart,
+    onNodeDragStop,
+    onSelectionChange,
+    onAddTextNode,
+    onAddSimpleNode,
+    onAddCsvNode,
+    onReset,
+    onClearAll,
+    nodeCount,
+    edgeCount,
+    addNode,
+    copyPaste,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useFlowEditor(initialMode);
 
   // ドラッグ&ドロップ（HTML5版）
   const { reactFlowWrapper, isDragOver, onDrop, onDragOver, onDragLeave } = useHtmlDragAndDrop(addNode);
@@ -99,6 +120,10 @@ function FlowEditorInner({ initialMode }) {
         onZoomDisableChange={handleZoomDisableChange}
         onZoomChange={handleZoomChange}
         copyPaste={copyPaste}
+        undo={undo}
+        redo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
       />
 
       {/* メインフローエリア */}
@@ -109,6 +134,9 @@ function FlowEditorInner({ initialMode }) {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodeDragStart={onNodeDragStart}
+          onNodeDragStop={onNodeDragStop}
+          onSelectionChange={onSelectionChange}
           onMove={onMove}
           nodeTypes={nodeTypes}
           connectionLineType={ConnectionLineType.SmoothStep}
@@ -118,6 +146,13 @@ function FlowEditorInner({ initialMode }) {
           zoomOnDoubleClick={!isZoomDisabled}
           panOnScroll={true}
           panOnScrollMode="free"
+          panOnDrag={[2]} // 右クリック（マウスボタン2）でパン操作
+          deleteKeyCode={null} // デフォルトの削除機能を無効化（カスタム削除機能を使用）
+          multiSelectionKeyCode={["Meta", "Control", "Shift"]} // 複数選択をCtrl/Cmd/Shiftキーで有効化
+          selectionKeyCode={null} // 範囲選択を有効化（空白エリアでの左ドラッグで範囲選択）
+          selectionMode="partial" // 部分的に重なっているノードも選択対象に含める
+          selectNodesOnDrag={false} // ドラッグ時の自動選択を無効化（範囲選択と区別）
+          selectionOnDrag={true} // ドラッグによる範囲選択を有効化
           proOptions={{
             hideAttribution: true, // クレジット非表示
             hideDevTools: true, // DevTools無効化
