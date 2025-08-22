@@ -123,6 +123,42 @@ const TooltipToggleButton = ({ children, tooltip, defaultPressed = false, classN
   </TooltipTrigger>
 );
 
+/**
+ * ドラッグ可能なノードアイテムコンポーネント
+ *
+ * @param {Object} props - プロパティ
+ * @param {string} props.nodeType - ノードタイプ
+ * @param {string} props.tooltip - ツールチップテキスト
+ * @param {React.ReactNode} props.children - アイコンコンテンツ
+ */
+const DraggableNodeItem = ({ nodeType, tooltip, children, className = BUTTON_STYLES.default }) => {
+  console.log(`🟢 DraggableNodeItem レンダリング: ${nodeType}`);
+
+  return (
+    <TooltipTrigger delay={TOOLTIP_CONFIG.delay} closeDelay={TOOLTIP_CONFIG.closeDelay}>
+      <div 
+        className={`${className} cursor-grab active:cursor-grabbing`}
+        draggable={true}
+        onDragStart={(e) => {
+          console.log(`🟢 HTML5 onDragStart: ${nodeType}`, e);
+          e.dataTransfer.setData("application/reactflow", nodeType);
+          e.dataTransfer.setData("text/plain", nodeType);
+          e.dataTransfer.effectAllowed = "copy";
+        }}
+        onDragEnd={(e) => {
+          console.log(`🟢 HTML5 onDragEnd: ${nodeType}`, e);
+        }}
+      >
+        {children}
+      </div>
+      <Tooltip className={TOOLTIP_STYLES.base} offset={TOOLTIP_CONFIG.offset}>
+        {tooltip}
+        <TooltipArrow />
+      </Tooltip>
+    </TooltipTrigger>
+  );
+};
+
 // ================================================================
 // ツールバーグループコンポーネント
 // ================================================================
@@ -214,23 +250,40 @@ const ViewSettingsGroup = () => (
  * 各種ノードの追加機能を提供
  *
  * @param {Object} props - プロパティ
- * @param {function} props.addTextNode - テキストノード追加ハンドラー
- * @param {function} props.addSimpleNode - シンプルノード追加ハンドラー
- * @param {function} props.addCsvNode - CSVノード追加ハンドラー
+ * @param {function} props.onAddTextNode - テキストノード追加ハンドラー
+ * @param {function} props.onAddSimpleNode - シンプルノード追加ハンドラー
+ * @param {function} props.onAddCsvNode - CSVノード追加ハンドラー
  */
-const NodeAdditionGroup = ({ addTextNode, addSimpleNode, addCsvNode }) => (
+const NodeAdditionGroup = ({ onAddTextNode, onAddSimpleNode, onAddCsvNode }) => (
   <Group className="flex items-center gap-1">
-    <TooltipButton tooltip="テキストノードを追加" onPress={addTextNode}>
+    {/* クリック追加ボタン */}
+    <TooltipButton tooltip="テキストノードを追加" onPress={onAddTextNode}>
       <TextIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
-    <TooltipButton tooltip="シンプルノードを追加" onPress={addSimpleNode}>
+    <TooltipButton tooltip="シンプルノードを追加" onPress={onAddSimpleNode}>
       <NodeIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
-    <TooltipButton tooltip="CSVノードを追加" onPress={addCsvNode}>
+    <TooltipButton tooltip="CSVノードを追加" onPress={onAddCsvNode}>
       <CsvIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
+
+    {/* セパレーター */}
+    <div className="w-px h-6 bg-base-300 mx-1" />
+
+    {/* ドラッグ可能アイテム */}
+    <DraggableNodeItem nodeType="customText" tooltip="テキストノードをドラッグ&ドロップ">
+      <TextIcon className={BUTTON_STYLES.iconSize} />
+    </DraggableNodeItem>
+
+    <DraggableNodeItem nodeType="customSimple" tooltip="シンプルノードをドラッグ&ドロップ">
+      <NodeIcon className={BUTTON_STYLES.iconSize} />
+    </DraggableNodeItem>
+
+    <DraggableNodeItem nodeType="inputFileCsv" tooltip="CSVノードをドラッグ&ドロップ">
+      <CsvIcon className={BUTTON_STYLES.iconSize} />
+    </DraggableNodeItem>
   </Group>
 );
 
@@ -239,12 +292,12 @@ const NodeAdditionGroup = ({ addTextNode, addSimpleNode, addCsvNode }) => (
  * リセット、全削除の機能を提供
  *
  * @param {Object} props - プロパティ
- * @param {function} props.resetFlow - フローリセットハンドラー
- * @param {function} props.clearNodes - 全ノードクリアハンドラー
+ * @param {function} props.onReset - フローリセットハンドラー
+ * @param {function} props.onClearAll - 全ノードクリアハンドラー
  */
-const FlowOperationsGroup = ({ resetFlow, clearNodes }) => (
+const FlowOperationsGroup = ({ onReset, onClearAll }) => (
   <Group className="flex items-center gap-1">
-    <TooltipButton tooltip="フローを初期状態にリセット" onPress={resetFlow}>
+    <TooltipButton tooltip="フローを初期状態にリセット" onPress={onReset}>
       <ResetIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
@@ -256,7 +309,7 @@ const FlowOperationsGroup = ({ resetFlow, clearNodes }) => (
           <div className="text-xs text-red-200">(復元できません)</div>
         </div>
       }
-      onPress={clearNodes}
+      onPress={onClearAll}
     >
       <TrashIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
@@ -300,15 +353,15 @@ const StatisticsDisplay = ({ nodes, edges }) => (
  * FlowEditor用ツールバーコンポーネント
  *
  * @param {Object} props - プロパティ
- * @param {function} props.addTextNode - テキストノード追加ハンドラー
- * @param {function} props.addSimpleNode - シンプルノード追加ハンドラー
- * @param {function} props.addCsvNode - CSVノード追加ハンドラー
- * @param {function} props.resetFlow - フローリセットハンドラー
- * @param {function} props.clearNodes - 全ノードクリアハンドラー
- * @param {Array} props.nodes - ノードの配列（統計情報用）
- * @param {Array} props.edges - エッジの配列（統計情報用）
+ * @param {function} props.onAddTextNode - テキストノード追加ハンドラー
+ * @param {function} props.onAddSimpleNode - シンプルノード追加ハンドラー
+ * @param {function} props.onAddCsvNode - CSVノード追加ハンドラー
+ * @param {function} props.onReset - フローリセットハンドラー
+ * @param {function} props.onClearAll - 全ノードクリアハンドラー
+ * @param {number} props.nodeCount - ノード数（統計情報用）
+ * @param {number} props.edgeCount - エッジ数（統計情報用）
  */
-const FlowEditorToolbar = ({ addTextNode, addSimpleNode, addCsvNode, resetFlow, clearNodes, nodes = [], edges = [] }) => {
+const FlowEditorToolbar = ({ onAddTextNode, onAddSimpleNode, onAddCsvNode, onReset, onClearAll, nodeCount = 0, edgeCount = 0 }) => {
   return (
     <div className="bg-base-200">
       <AriaToolbar className="flex items-center px-1 py-1 gap-0">
@@ -333,12 +386,12 @@ const FlowEditorToolbar = ({ addTextNode, addSimpleNode, addCsvNode, resetFlow, 
         <Separator className={`w-px ${BUTTON_STYLES.separatorHeight} bg-base-300 mx-2`} />
 
         {/* ノード追加グループ */}
-        <NodeAdditionGroup addTextNode={addTextNode} addSimpleNode={addSimpleNode} addCsvNode={addCsvNode} />
+        <NodeAdditionGroup onAddTextNode={onAddTextNode} onAddSimpleNode={onAddSimpleNode} onAddCsvNode={onAddCsvNode} />
 
         <Separator className={`w-px ${BUTTON_STYLES.separatorHeight} bg-base-300 mx-2`} />
 
         {/* フロー操作グループ */}
-        <FlowOperationsGroup resetFlow={resetFlow} clearNodes={clearNodes} />
+        <FlowOperationsGroup onReset={onReset} onClearAll={onClearAll} />
 
         {/* 右端のスペーサー */}
         <div className="flex-1" />
