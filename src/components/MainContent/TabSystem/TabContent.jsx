@@ -1,6 +1,6 @@
 import React from "react";
 import { Tabs, TabPanel } from "react-aria-components";
-import FlowEditor from "../../FlowEditor/FlowEditor";
+import FlowEditor from "../FlowEditor/FlowEditor";
 
 /**
  * タブコンテンツをレンダリングするコンポーネント

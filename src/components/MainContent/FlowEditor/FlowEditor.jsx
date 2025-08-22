@@ -12,7 +12,7 @@ import ReactFlow, {
   ReactFlowProvider, // 追加
 } from "reactflow";
 import "reactflow/dist/style.css";
-import ConsoleMsg from "../../utils/ConsoleMsg";
+import ConsoleMsg from "../../../utils/ConsoleMsg";
 import { nodeTypes } from "./CustomNodes";
 
 // 初期ノードデータ（カスタムスタイル付き）
