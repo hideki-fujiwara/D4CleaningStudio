@@ -77,6 +77,28 @@ export const RedoIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
   </svg>
 );
 
+/**
+ * コピーアイコン
+ * ノードのコピー機能を表現（重なったドキュメント）
+ * キーボードショートカット: Ctrl+C
+ */
+export const CopyIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+  </svg>
+);
+
+/**
+ * ペーストアイコン
+ * ノードのペースト機能を表現（クリップボードからドキュメントへ）
+ * キーボードショートカット: Ctrl+V
+ */
+export const PasteIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+  </svg>
+);
+
 // ================================================================
 // フロー実行関連アイコン
 // ================================================================
@@ -296,6 +318,8 @@ export const getFileIcon = (filename) => {
  * 【編集操作】
  * - UndoIcon: 元に戻す
  * - RedoIcon: やり直し
+ * - CopyIcon: コピー
+ * - PasteIcon: ペースト
  *
  * 【実行操作】
  * - PlayIcon: 実行

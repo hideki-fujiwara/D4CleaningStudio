@@ -32,6 +32,8 @@ import {
   SaveAsIcon, // 別名で保存
   UndoIcon, // 元に戻す
   RedoIcon, // やり直し
+  CopyIcon, // コピー
+  PasteIcon, // ペースト
   PlayIcon, // 実行
   StepIcon, // ステップ実行
   GridIcon, // グリッド表示
@@ -186,9 +188,12 @@ const FileOperationsGroup = () => (
 
 /**
  * 編集操作グループ
- * 元に戻す、やり直しの機能を提供
+ * 元に戻す、やり直し、コピー、ペーストの機能を提供
+ *
+ * @param {Object} props - プロパティ
+ * @param {Object} props.copyPaste - コピー・ペースト機能のオブジェクト
  */
-const EditOperationsGroup = () => (
+const EditOperationsGroup = ({ copyPaste }) => (
   <Group className="flex items-center gap-1">
     <TooltipButton
       tooltip="元に戻す (Ctrl+Z)"
@@ -202,6 +207,21 @@ const EditOperationsGroup = () => (
       isDisabled={true} // TODO: Redo機能実装時にfalseに
     >
       <RedoIcon className={BUTTON_STYLES.iconSize} />
+    </TooltipButton>
+
+    {/* セパレーター */}
+    <div className="w-px h-6 bg-base-300 mx-1" />
+
+    <TooltipButton
+      tooltip={`ノードをコピー (Ctrl+C)${copyPaste?.hasSelection ? ` - ${copyPaste.selectedCount}個選択中` : ""}`}
+      isDisabled={!copyPaste?.hasSelection}
+      onPress={copyPaste?.copySelectedNodes}
+    >
+      <CopyIcon className={BUTTON_STYLES.iconSize} />
+    </TooltipButton>
+
+    <TooltipButton tooltip={`ノードをペースト (Ctrl+V)${copyPaste?.hasClipboard ? ` - ${copyPaste.clipboardCount}個` : ""}`} isDisabled={!copyPaste?.hasClipboard} onPress={copyPaste?.pasteNodes}>
+      <PasteIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
   </Group>
 );
@@ -356,14 +376,15 @@ const FlowOperationsGroup = ({ onReset, onClearAll }) => (
 
 /**
  * 統計情報表示
- * ノード数、エッジ数、ズーム率の統計を表示
+ * ノード数、エッジ数、ズーム率、コピー・ペースト状態の統計を表示
  *
  * @param {Object} props - プロパティ
  * @param {number} props.nodeCount - ノード数
  * @param {number} props.edgeCount - エッジ数
  * @param {number} props.zoom - ズーム率
+ * @param {Object} props.copyPaste - コピー・ペースト状態
  */
-const StatisticsDisplay = ({ nodeCount, edgeCount, zoom }) => (
+const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste }) => (
   <TooltipTrigger delay={TOOLTIP_CONFIG.delay} closeDelay={TOOLTIP_CONFIG.closeDelay}>
     <div className="text-sm text-base-content/70 px-3 py-2 bg-base-100 rounded border border-base-300 cursor-help flex items-center gap-3">
       <span className="font-mono">ノード: {nodeCount}</span>
@@ -371,14 +392,36 @@ const StatisticsDisplay = ({ nodeCount, edgeCount, zoom }) => (
       <span className="font-mono">エッジ: {edgeCount}</span>
       <span className="text-base-300">|</span>
       <span className="font-mono">倍率: {Math.round(zoom * 100)}%</span>
+      {copyPaste && (
+        <>
+          <span className="text-base-300">|</span>
+          <span className="font-mono">選択: {copyPaste.selectedCount}</span>
+          {copyPaste.hasClipboard && (
+            <>
+              <span className="text-base-300">|</span>
+              <span className="font-mono text-blue-600">📋 {copyPaste.clipboardCount}</span>
+            </>
+          )}
+        </>
+      )}
     </div>
     <Tooltip className={TOOLTIP_STYLES.base} offset={TOOLTIP_CONFIG.offset}>
       <div className="text-center">
         <div className="font-semibold mb-2">フロー統計情報</div>
         <div className="text-xs space-y-1">
-          <div>� 総ノード数: {nodeCount}</div>
+          <div>📦 総ノード数: {nodeCount}</div>
           <div>🔗 総エッジ数: {edgeCount}</div>
           <div>🔍 表示倍率: {Math.round(zoom * 100)}%</div>
+          {copyPaste && (
+            <>
+              <div className="border-t border-base-content/20 pt-1 mt-2">
+                <div>✅ 選択ノード: {copyPaste.selectedCount}</div>
+                <div>📋 クリップボード: {copyPaste.clipboardCount}</div>
+                {copyPaste.hasSelection && <div className="text-green-400">Ctrl+C でコピー可能</div>}
+                {copyPaste.hasClipboard && <div className="text-blue-400">Ctrl+V でペースト可能</div>}
+              </div>
+            </>
+          )}
           <div className="border-t border-base-content/20 pt-1 mt-2">
             <div>ズーム: {zoom.toFixed(2)}x</div>
           </div>
@@ -412,6 +455,7 @@ const StatisticsDisplay = ({ nodeCount, edgeCount, zoom }) => (
  * @param {boolean} props.isZoomDisabled - ズーム機能の無効状態
  * @param {function} props.onZoomDisableChange - ズーム無効状態変更ハンドラー
  * @param {function} props.onZoomChange - ズーム率変更ハンドラー
+ * @param {Object} props.copyPaste - コピー・ペースト機能のオブジェクト
  */
 const FlowEditorToolbar = ({
   onAddTextNode,
@@ -425,6 +469,7 @@ const FlowEditorToolbar = ({
   isZoomDisabled = false,
   onZoomDisableChange,
   onZoomChange,
+  copyPaste,
 }) => {
   return (
     <div className="bg-base-200">
@@ -435,7 +480,7 @@ const FlowEditorToolbar = ({
         <Separator className={`w-px ${BUTTON_STYLES.separatorHeight} bg-base-300 mx-2`} />
 
         {/* 編集操作グループ */}
-        <EditOperationsGroup />
+        <EditOperationsGroup copyPaste={copyPaste} />
 
         <Separator className={`w-px ${BUTTON_STYLES.separatorHeight} bg-base-300 mx-2`} />
 
@@ -461,7 +506,7 @@ const FlowEditorToolbar = ({
         <div className="flex-1" />
 
         {/* 統計情報 */}
-        <StatisticsDisplay nodeCount={nodeCount} edgeCount={edgeCount} zoom={zoom} />
+        <StatisticsDisplay nodeCount={nodeCount} edgeCount={edgeCount} zoom={zoom} copyPaste={copyPaste} />
       </AriaToolbar>
     </div>
   );

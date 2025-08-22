@@ -31,7 +31,8 @@ function FlowEditorInner({ initialMode }) {
   // ========================================================================================
 
   // メインロジック（状態管理、ノード操作）
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onAddTextNode, onAddSimpleNode, onAddCsvNode, onReset, onClearAll, nodeCount, edgeCount, addNode } = useFlowEditor(initialMode);
+  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onAddTextNode, onAddSimpleNode, onAddCsvNode, onReset, onClearAll, nodeCount, edgeCount, addNode, copyPaste } =
+    useFlowEditor(initialMode);
 
   // ドラッグ&ドロップ（HTML5版）
   const { reactFlowWrapper, isDragOver, onDrop, onDragOver, onDragLeave } = useHtmlDragAndDrop(addNode);
@@ -97,10 +98,11 @@ function FlowEditorInner({ initialMode }) {
         isZoomDisabled={isZoomDisabled}
         onZoomDisableChange={handleZoomDisableChange}
         onZoomChange={handleZoomChange}
+        copyPaste={copyPaste}
       />
 
       {/* メインフローエリア */}
-      <div className="flex-1 relative" ref={reactFlowWrapper} onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}>
+      <div className="flex-1 relative" ref={reactFlowWrapper} onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave} onMouseMove={copyPaste.updateMousePosition}>
         <ReactFlow
           nodes={nodes}
           edges={edges}

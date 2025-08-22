@@ -12,6 +12,7 @@ import { useCallback, useState, useRef } from "react";
 import { useNodesState, useEdgesState, addEdge, useReactFlow } from "reactflow";
 import ConsoleMsg from "../../../../utils/ConsoleMsg";
 import { initialNodes, initialEdges } from "../data/initialData";
+import { useCopyPaste } from "./useCopyPaste";
 
 /**
  * FlowEditorのメインロジックを管理するフック
@@ -53,6 +54,13 @@ export const useFlowEditor = (initialMode = "default") => {
 
   // React Flowコンテナへの参照
   const reactFlowWrapper = useRef(null);
+
+  // ========================================================================================
+  // コピー・ペースト機能
+  // ========================================================================================
+
+  // コピー・ペースト機能を使用
+  const copyPasteHook = useCopyPaste();
 
   // ========================================================================================
   // エッジ接続処理
@@ -230,5 +238,8 @@ export const useFlowEditor = (initialMode = "default") => {
     addNode,
     setNodes,
     setEdges,
+
+    // コピー・ペースト機能
+    copyPaste: copyPasteHook,
   };
 };
