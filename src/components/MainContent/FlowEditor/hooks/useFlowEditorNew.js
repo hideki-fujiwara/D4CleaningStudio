@@ -28,16 +28,7 @@ import { useHistory } from "./useHistory";
  * @param {Function} onUpdateTab - タブ更新関数
  * @param {Function} onRequestTabClose - タブクローズ確認コールバック
  */
-export const useFlowEditor = (
-  initialMode = "default",
-  loadedData = null,
-  filePath = null,
-  fileName = "NewFile",
-  tabId = null,
-  onCreateNewTab = null,
-  onUpdateTab = null,
-  onRequestTabClose = null
-) => {
+export const useFlowEditor = (initialMode = "default", loadedData = null, filePath = null, fileName = "NewFile", tabId = null, onCreateNewTab = null, onUpdateTab = null, onRequestTabClose = null) => {
   // ========================================================================================
   // 初期データ設定
   // ========================================================================================
@@ -106,7 +97,7 @@ export const useFlowEditor = (
     onHistoryChange: (historyInfo) => {
       // 履歴変更をFlowEditorInnerに通知
       console.log("履歴情報変更:", historyInfo);
-    }
+    },
   });
 
   // ========================================================================================
@@ -130,31 +121,27 @@ export const useFlowEditor = (
     initialFilePath: filePath,
     initialFileName: fileName,
     onCreateNewTab,
-    onHistoryReset: historyHook.resetHistory
+    onHistoryReset: historyHook.resetHistory,
   });
 
   // ========================================================================================
   // 初期化処理
   // ========================================================================================
 
-  // ファイル読み込み完了後に履歴をクリア（一度だけ実行）
-  const [isInitialized, setIsInitialized] = useState(false);
-  
+  // ファイル読み込み完了後に履歴をクリア
   useEffect(() => {
-    if (initialMode === "loaded" && !isInitialized) {
+    if (initialMode === "loaded") {
       console.log("ファイル読み込みモード - 履歴リセット開始");
       // 履歴をリセット
       historyHook.resetHistory();
       historyHook.setLoadingFlag(true);
-      
+
       setTimeout(() => {
         historyHook.setLoadingFlag(false);
         ConsoleMsg("info", "ファイル読み込み完了：履歴をリセットしました");
       }, 100);
-      
-      setIsInitialized(true);
     }
-  }, [initialMode, isInitialized]); // historyHookを依存配列から削除
+  }, [initialMode, historyHook]);
 
   // ========================================================================================
   // ノード操作
@@ -165,22 +152,26 @@ export const useFlowEditor = (
     (params) => {
       const newEdge = addEdge(params, edges);
       setEdges(newEdge);
-      
+
       // 履歴に保存
       setTimeout(() => {
-        historyHookRef.current.saveToHistory(nodes, newEdge);
+        historyHook.saveToHistory(nodes, newEdge);
       }, 50);
     },
-    [edges, nodes]
+    [edges, nodes, historyHook]
   );
 
   // ノード選択変更
   const onSelectionChange = useCallback(
     (selection) => {
       console.log("選択変更:", selection);
-      // 選択変更では履歴に保存しない（パフォーマンス向上のため）
+
+      // 履歴に保存（選択変更のみの場合はデバウンス）
+      setTimeout(() => {
+        historyHook.saveToHistory(selection.nodes || nodes, edges);
+      }, 300);
     },
-    []
+    [nodes, edges, historyHook]
   );
 
   // ノードドラッグ開始
@@ -192,13 +183,13 @@ export const useFlowEditor = (
   const onNodeDragStop = useCallback(
     (event, node) => {
       console.log("ノードドラッグ終了:", node.id);
-      
+
       // ドラッグ終了時に履歴に保存
       setTimeout(() => {
-        historyHookRef.current.saveToHistory(nodes, edges);
+        historyHook.saveToHistory(nodes, edges);
       }, 50);
     },
-    [nodes, edges]
+    [nodes, edges, historyHook]
   );
 
   // ========================================================================================
@@ -248,13 +239,13 @@ export const useFlowEditor = (
 
       // 履歴に保存
       setTimeout(() => {
-        historyHookRef.current.saveToHistory(newNodes, edges);
+        historyHook.saveToHistory(newNodes, edges);
       }, 50);
 
       ConsoleMsg("info", `新しい${nodeType}を追加しました: ${newId}`);
       return newNode;
     },
-    [nodes, edges, nodeCounter, getNodeSize]
+    [nodes, edges, nodeCounter, getNodeSize, historyHook]
   );
 
   // 各ノードタイプの追加関数
@@ -270,28 +261,28 @@ export const useFlowEditor = (
   const onReset = useCallback(() => {
     const resetNodes = initialMode === "empty" ? [] : initialNodes;
     const resetEdges = initialMode === "empty" ? [] : initialEdges;
-    
+
     setNodes(resetNodes);
     setEdges(resetEdges);
     setNodeCounter(1);
-    
+
     // 履歴をリセット
-    historyHookRef.current.resetHistory();
-    
+    historyHook.resetHistory();
+
     ConsoleMsg("info", "フローを初期状態にリセットしました");
-  }, [initialMode]);
+  }, [initialMode, historyHook]);
 
   // すべてクリア機能
   const onClearAll = useCallback(() => {
     setNodes([]);
     setEdges([]);
     setNodeCounter(1);
-    
+
     // 履歴をリセット
-    historyHookRef.current.resetHistory();
-    
+    historyHook.resetHistory();
+
     ConsoleMsg("info", "すべてのノードとエッジをクリアしました");
-  }, []);
+  }, [historyHook]);
 
   // ========================================================================================
   // コピー・ペースト機能
@@ -307,7 +298,7 @@ export const useFlowEditor = (
     onHistoryChange: (newNodes, newEdges) => {
       // コピー・ペースト操作後に履歴に保存
       setTimeout(() => {
-        historyHookRef.current.saveToHistory(newNodes, newEdges);
+        historyHook.saveToHistory(newNodes, newEdges);
       }, 50);
     },
   });
@@ -316,50 +307,42 @@ export const useFlowEditor = (
   // キーボードショートカット
   // ========================================================================================
 
-  // 最新のフック関数を参照するためのRef
-  const historyHookRef = useRef();
-  const fileSaveHookRef = useRef();
-  
-  // Refを更新
-  historyHookRef.current = historyHook;
-  fileSaveHookRef.current = fileSaveHook;
-
   useEffect(() => {
     const handleKeyDown = (event) => {
       // Ctrl+Z（取り消し）
       if (event.ctrlKey && event.key === "z" && !event.shiftKey) {
         event.preventDefault();
-        historyHookRef.current.undo();
+        historyHook.undo();
       }
 
       // Ctrl+Y または Ctrl+Shift+Z（やり直し）
       if (event.ctrlKey && (event.key === "y" || (event.key === "z" && event.shiftKey))) {
         event.preventDefault();
-        historyHookRef.current.redo();
+        historyHook.redo();
       }
 
       // Ctrl+S（保存）
       if (event.ctrlKey && event.key === "s" && !event.shiftKey) {
         event.preventDefault();
-        fileSaveHookRef.current.saveFlow();
+        fileSaveHook.saveFlow();
       }
 
       // Ctrl+Shift+S（名前をつけて保存）
       if (event.ctrlKey && event.shiftKey && event.key === "S") {
         event.preventDefault();
-        fileSaveHookRef.current.saveAsFlow();
+        fileSaveHook.saveAsFlow();
       }
 
       // Ctrl+O（ファイルを開く）
       if (event.ctrlKey && event.key === "o") {
         event.preventDefault();
-        fileSaveHookRef.current.openFlow();
+        fileSaveHook.openFlow();
       }
 
       // Ctrl+N（新規ファイル）
       if (event.ctrlKey && event.key === "n") {
         event.preventDefault();
-        fileSaveHookRef.current.newFlow();
+        fileSaveHook.newFlow();
       }
     };
 
@@ -367,7 +350,7 @@ export const useFlowEditor = (
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, []); // 空の依存配列で一度だけ登録
+  }, [historyHook, fileSaveHook]);
 
   // ========================================================================================
   // タブ更新通知

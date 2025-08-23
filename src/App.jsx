@@ -24,6 +24,19 @@ function App() {
   });
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
 
+  // 履歴情報を管理するstate
+  const [historyInfo, setHistoryInfo] = useState({
+    historyLength: 0,
+    currentHistoryIndex: -1,
+    canUndo: false,
+    canRedo: false,
+  });
+
+  // 履歴情報変更時のハンドラー
+  const handleHistoryChange = (newHistoryInfo) => {
+    setHistoryInfo(newHistoryInfo);
+  };
+
   // ========================================================================================
   // キーボードイベントハンドラー
   // ========================================================================================
@@ -133,7 +146,7 @@ function App() {
         <WindowTitlebar />
         <div className="flex-1 overflow-hidden">
           {/* メインコンテンツエリア */}
-          <MainContent />
+          <MainContent onHistoryChange={handleHistoryChange} />
         </div>
         {/* ステータスバー */}
         <Statusbar />

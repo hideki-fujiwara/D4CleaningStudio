@@ -16,7 +16,7 @@ import TabContainer from "./TabSystem/TabContainer";
  * 中央は上下2段に分割されている。
  * 中央上パネルにタブ形式でFlowEditorを配置。
  */
-function MainContent() {
+function MainContent({ onHistoryChange }) {
   // ========================================================================================
   // 定数・デフォルト値
   // ========================================================================================
@@ -140,7 +140,7 @@ function MainContent() {
           <PanelGroup direction="vertical" onLayout={(sizes) => setVerticalLayout(sizes)} className="h-full">
             {/* 中央上パネル（タブシステム） */}
             <Panel ref={centerUpPanelRef} className="overflow-hidden">
-              <TabContainer initialTabs={initialTabs} />
+              <TabContainer initialTabs={initialTabs} onHistoryChange={onHistoryChange} />
             </Panel>
 
             <PanelResizeHandle className="h-1 bg-base-200 hover:bg-accent-content active:h-1.5 active:bg-accent-content" />

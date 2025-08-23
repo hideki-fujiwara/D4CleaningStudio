@@ -401,8 +401,13 @@ const FlowOperationsGroup = ({ onReset, onClearAll }) => (
  * @param {number} props.edgeCount - エッジ数
  * @param {number} props.zoom - ズーム率
  * @param {Object} props.copyPaste - コピー・ペースト・削除状態
+ * @param {number} props.historyLength - 履歴件数
+ * @param {number} props.currentHistoryIndex - 現在の履歴インデックス
  */
-const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste }) => (
+const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste, historyLength, currentHistoryIndex }) => {
+  console.log("StatisticsDisplay - 履歴情報:", { historyLength, currentHistoryIndex });
+  
+  return (
   <TooltipTrigger delay={TOOLTIP_CONFIG.delay} closeDelay={TOOLTIP_CONFIG.closeDelay}>
     <div className="text-sm text-base-content/70 px-3 py-2 bg-base-100 rounded border border-base-300 cursor-help flex items-center gap-3">
       <span className="font-mono">ノード: {nodeCount}</span>
@@ -410,6 +415,10 @@ const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste }) => (
       <span className="font-mono">エッジ: {edgeCount}</span>
       <span className="text-base-300">|</span>
       <span className="font-mono">倍率: {Math.round(zoom * 100)}%</span>
+      <span className="text-base-300">|</span>
+      <span className="font-mono">
+        履歴: {historyLength > 0 ? `${currentHistoryIndex}/${historyLength}` : '0'}
+      </span>
       {copyPaste && (
         <>
           <span className="text-base-300">|</span>
@@ -443,6 +452,8 @@ const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste }) => (
           )}
           <div className="border-t border-base-content/20 pt-1 mt-2">
             <div>ズーム: {zoom.toFixed(2)}x</div>
+            <div>📚 履歴: {historyLength}件</div>
+            {historyLength > 0 && <div>📍 現在位置: {currentHistoryIndex}/{historyLength}</div>}
           </div>
         </div>
       </div>
@@ -453,7 +464,8 @@ const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste }) => (
       </OverlayArrow>
     </Tooltip>
   </TooltipTrigger>
-);
+  );
+};
 
 // ================================================================
 // メインツールバーコンポーネント
@@ -503,6 +515,8 @@ const FlowEditorToolbar = ({
   redo,
   canUndo = false,
   canRedo = false,
+  historyLength = 0,
+  currentHistoryIndex = -1,
   // ファイル保存
   saveFlow,
   saveAsFlow,
@@ -510,6 +524,8 @@ const FlowEditorToolbar = ({
   openFlow,
   hasUnsavedChanges = false,
 }) => {
+  console.log("FlowEditorToolbar - 履歴情報:", { historyLength, currentHistoryIndex });
+  
   return (
     <div className="bg-base-200">
       <AriaToolbar className="flex items-center px-1 py-1 gap-0">
@@ -545,7 +561,7 @@ const FlowEditorToolbar = ({
         <div className="flex-1" />
 
         {/* 統計情報 */}
-        <StatisticsDisplay nodeCount={nodeCount} edgeCount={edgeCount} zoom={zoom} copyPaste={copyPaste} />
+        <StatisticsDisplay nodeCount={nodeCount} edgeCount={edgeCount} zoom={zoom} copyPaste={copyPaste} historyLength={historyLength} currentHistoryIndex={currentHistoryIndex} />
       </AriaToolbar>
     </div>
   );

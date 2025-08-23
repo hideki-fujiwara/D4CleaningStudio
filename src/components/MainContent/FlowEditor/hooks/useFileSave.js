@@ -1,0 +1,419 @@
+/**
+ * ================================================================
+ * ファイル保存機能カスタムフック
+ * ================================================================
+ *
+ * FlowEditorのファイル保存機能を分離したカスタムフック
+ * 保存、名前をつけて保存、新規ファイル、ファイルを開く機能を提供
+ *
+ * @author D4CleaningStudio
+ * @version 1.0.0
+ */
+
+import { useState, useCallback, useRef } from "react";
+import { save, open } from "@tauri-apps/plugin-dialog";
+import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
+import ConsoleMsg from "../../../../utils/ConsoleMsg";
+
+/**
+ * ファイル保存機能カスタムフック
+ *
+ * @param {Object} params - パラメータ
+ * @param {Function} params.exportFlowData - フローデータ出力関数
+ * @param {Function} params.getNodes - ノード取得関数
+ * @param {Function} params.getEdges - エッジ取得関数
+ * @param {Function} params.setNodes - ノード設定関数
+ * @param {Function} params.setEdges - エッジ設定関数
+ * @param {Function} params.setNodeCounter - ノードカウンター設定関数
+ * @param {number} params.nodeCounter - 現在のノードカウンター
+ * @param {string} params.initialFilePath - 初期ファイルパス
+ * @param {string} params.initialFileName - 初期ファイル名
+ * @param {Function} params.onCreateNewTab - 新規タブ作成コールバック
+ * @param {Function} params.onHistoryReset - 履歴リセットコールバック
+ * @returns {Object} ファイル保存機能
+ */
+export const useFileSave = ({ exportFlowData, getNodes, getEdges, setNodes, setEdges, setNodeCounter, nodeCounter, initialFilePath, initialFileName, onCreateNewTab, onHistoryReset }) => {
+  // ========================================================================================
+  // 状態管理
+  // ========================================================================================
+
+  // 現在のファイルパス（null = 新規ファイル）
+  const [currentFilePath, setCurrentFilePath] = useState(initialFilePath);
+
+  // ファイル名（表示用）
+  const [displayFileName, setDisplayFileName] = useState(initialFileName);
+
+  // 保存状態
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // 最後に保存された状態（変更検知用）
+  const [lastSavedState, setLastSavedState] = useState(null);
+
+  // 保存確認ダイアログ用の状態
+  const pendingCloseCallback = useRef(null);
+
+  // 保存処理中フラグ
+  const isSaving = useRef(false);
+
+  // ファイル読み込み中フラグ
+  const isLoading = useRef(false);
+
+  // ========================================================================================
+  // ユーティリティ関数
+  // ========================================================================================
+
+  /**
+   * デフォルトの保存パスを取得
+   */
+  const getDefaultSavePath = useCallback(async (fileName) => {
+    try {
+      const srcPath = await window.__TAURI__.path.join(await window.__TAURI__.path.appDir(), "src");
+      return await window.__TAURI__.path.join(srcPath, `${fileName}.d4flow`);
+    } catch (error) {
+      console.error("デフォルトパス取得エラー:", error);
+      return `${fileName}.d4flow`;
+    }
+  }, []);
+
+  // ========================================================================================
+  // 保存機能
+  // ========================================================================================
+
+  /**
+   * ファイル保存機能（Ctrl+S）
+   */
+  const saveFlow = useCallback(async () => {
+    try {
+      // 保存処理中フラグを設定
+      isSaving.current = true;
+
+      const flowData = exportFlowData();
+      const jsonString = JSON.stringify(flowData, null, 2);
+
+      if (currentFilePath) {
+        // 既存ファイルに上書き保存
+        await writeTextFile(currentFilePath, jsonString);
+        setHasUnsavedChanges(false);
+
+        // 保存成功時に履歴をリセット
+        if (onHistoryReset) {
+          onHistoryReset();
+        }
+
+        // 最後の保存状態を更新
+        setLastSavedState({
+          nodes: JSON.stringify(getNodes()),
+          edges: JSON.stringify(getEdges()),
+          nodeCounter: nodeCounter,
+        });
+
+        ConsoleMsg("success", `ファイルを保存しました: ${displayFileName}`);
+      } else {
+        // 新規ファイルなので名前をつけて保存のダイアログを表示
+        const defaultPath = await getDefaultSavePath(displayFileName);
+        const filePath = await save({
+          filters: [
+            {
+              name: "D4 Flow Files",
+              extensions: ["d4flow"],
+            },
+            {
+              name: "JSON Files",
+              extensions: ["json"],
+            },
+          ],
+          defaultPath: defaultPath,
+        });
+
+        if (filePath) {
+          // ファイルに保存
+          await writeTextFile(filePath, jsonString);
+
+          // ファイル名を抽出（パスから拡張子を除いたファイル名）
+          const fileNameOnly = filePath
+            .split(/[\\/]/)
+            .pop()
+            .replace(/\.[^/.]+$/, "");
+
+          // 状態を更新
+          setCurrentFilePath(filePath);
+          setDisplayFileName(fileNameOnly);
+          setHasUnsavedChanges(false);
+
+          // 保存成功時に履歴をリセット
+          if (onHistoryReset) {
+            onHistoryReset();
+          }
+
+          setLastSavedState({
+            nodes: JSON.stringify(getNodes()),
+            edges: JSON.stringify(getEdges()),
+            nodeCounter: nodeCounter,
+          });
+
+          ConsoleMsg("success", `ファイルを保存しました: ${fileNameOnly}`);
+        }
+      }
+    } catch (error) {
+      ConsoleMsg("error", `保存中にエラーが発生しました: ${error.message}`);
+      console.error("保存エラー:", error);
+    } finally {
+      // 保存処理完了後にフラグをリセット
+      isSaving.current = false;
+    }
+  }, [currentFilePath, displayFileName, exportFlowData, getDefaultSavePath, onHistoryReset, getNodes, getEdges, nodeCounter]);
+
+  /**
+   * 名前をつけて保存機能（Ctrl+Shift+S）
+   */
+  const saveAsFlow = useCallback(async () => {
+    try {
+      // 保存処理中フラグを設定
+      isSaving.current = true;
+
+      const flowData = exportFlowData();
+      const jsonString = JSON.stringify(flowData, null, 2);
+
+      // Tauriのファイル保存ダイアログを表示
+      const defaultPath = await getDefaultSavePath(displayFileName);
+      const filePath = await save({
+        filters: [
+          {
+            name: "D4 Flow Files",
+            extensions: ["d4flow"],
+          },
+          {
+            name: "JSON Files",
+            extensions: ["json"],
+          },
+        ],
+        defaultPath: defaultPath,
+      });
+
+      if (filePath) {
+        // ファイルに保存
+        await writeTextFile(filePath, jsonString);
+
+        // ファイル名を抽出（パスから拡張子を除いたファイル名）
+        const fileNameOnly = filePath
+          .split(/[\\/]/)
+          .pop()
+          .replace(/\.[^/.]+$/, "");
+
+        // 状態を更新
+        setCurrentFilePath(filePath);
+        setDisplayFileName(fileNameOnly);
+        setHasUnsavedChanges(false);
+
+        // 保存成功時に履歴をリセット
+        if (onHistoryReset) {
+          onHistoryReset();
+        }
+
+        // 最後の保存状態を更新
+        setLastSavedState({
+          nodes: JSON.stringify(getNodes()),
+          edges: JSON.stringify(getEdges()),
+          nodeCounter: nodeCounter,
+        });
+
+        // 新しいタブを作成してそちらに遷移
+        if (onCreateNewTab) {
+          onCreateNewTab({
+            title: fileNameOnly,
+            icon: "📄",
+            component: "FlowEditor",
+            closable: true,
+            hasUnsavedChanges: false,
+            props: {
+              initialMode: "loaded",
+              loadedData: flowData,
+              filePath: filePath,
+              fileName: fileNameOnly,
+            },
+          });
+        }
+
+        ConsoleMsg("success", `ファイルを保存しました: ${fileNameOnly}`);
+      }
+    } catch (error) {
+      ConsoleMsg("error", `保存中にエラーが発生しました: ${error.message}`);
+      console.error("名前をつけて保存エラー:", error);
+    } finally {
+      // 保存処理完了後にフラグをリセット
+      isSaving.current = false;
+    }
+  }, [exportFlowData, displayFileName, getDefaultSavePath, onHistoryReset, onCreateNewTab, getNodes, getEdges, nodeCounter]);
+
+  /**
+   * ファイルを開く機能（Ctrl+O）
+   */
+  const openFlow = useCallback(async () => {
+    try {
+      if (hasUnsavedChanges) {
+        const result = confirm("未保存の変更があります。ファイルを開きますか？変更は失われます。");
+        if (!result) return;
+      }
+
+      // Tauriのファイル選択ダイアログを表示
+      const filePath = await open({
+        filters: [
+          {
+            name: "D4 Flow Files",
+            extensions: ["d4flow"],
+          },
+          {
+            name: "JSON Files",
+            extensions: ["json"],
+          },
+        ],
+      });
+
+      if (filePath) {
+        // ファイル読み込み中フラグを設定
+        isLoading.current = true;
+
+        const fileContent = await readTextFile(filePath);
+        const flowData = JSON.parse(fileContent);
+
+        if (flowData && typeof flowData === "object") {
+          // フローデータを設定
+          setNodes(flowData.nodes || []);
+          setEdges(flowData.edges || []);
+          setNodeCounter(flowData.nodeCounter || 1);
+
+          // ファイル名を抽出
+          const fileNameOnly = filePath
+            .split(/[\\/]/)
+            .pop()
+            .replace(/\.[^/.]+$/, "");
+
+          // ファイル状態を更新
+          setCurrentFilePath(filePath);
+          setDisplayFileName(fileNameOnly);
+          setHasUnsavedChanges(false);
+
+          // 履歴をリセット
+          if (onHistoryReset) {
+            onHistoryReset();
+          }
+
+          ConsoleMsg("success", `ファイルを開きました: ${fileNameOnly}`);
+        } else {
+          ConsoleMsg("error", "無効なファイル形式です");
+        }
+      }
+    } catch (error) {
+      ConsoleMsg("error", `ファイルの読み込みに失敗しました: ${error.message}`);
+      console.error("ファイル読み込みエラー:", error);
+    } finally {
+      // ファイル読み込み完了後にフラグをリセット
+      isLoading.current = false;
+    }
+  }, [hasUnsavedChanges, setNodes, setEdges, setNodeCounter, onHistoryReset]);
+
+  /**
+   * 新規ファイル作成機能（Ctrl+N）
+   */
+  const newFlow = useCallback(() => {
+    if (hasUnsavedChanges) {
+      const result = confirm("未保存の変更があります。新規ファイルを作成しますか？変更は失われます。");
+      if (!result) return;
+    }
+
+    if (onCreateNewTab) {
+      // 新しいタブを作成
+      onCreateNewTab({
+        title: "NewFile",
+        icon: "📄",
+        component: "FlowEditor",
+        closable: true,
+        hasUnsavedChanges: false,
+        props: {
+          initialMode: "empty",
+        },
+      });
+    } else {
+      // 現在のタブをリセット
+      setNodes([]);
+      setEdges([]);
+      setNodeCounter(1);
+
+      // ファイル状態をリセット
+      setCurrentFilePath(null);
+      setDisplayFileName("NewFile");
+      setHasUnsavedChanges(false);
+
+      // 履歴もリセット
+      if (onHistoryReset) {
+        onHistoryReset();
+      }
+
+      ConsoleMsg("info", "新規フローを作成しました");
+    }
+  }, [hasUnsavedChanges, onCreateNewTab, setNodes, setEdges, setNodeCounter, onHistoryReset]);
+
+  // ========================================================================================
+  // タブクローズ確認
+  // ========================================================================================
+
+  /**
+   * タブクローズ要求処理
+   */
+  const requestTabClose = useCallback(async () => {
+    return new Promise((resolve) => {
+      if (hasUnsavedChanges) {
+        const result = confirm("未保存の変更があります。保存しますか？");
+        if (result) {
+          // 保存してからクローズ
+          pendingCloseCallback.current = resolve;
+          saveFlow();
+        } else {
+          // 保存せずにクローズ
+          resolve(true);
+        }
+      } else {
+        // 変更がないのでそのままクローズ
+        resolve(true);
+      }
+    });
+  }, [hasUnsavedChanges, saveFlow]);
+
+  // ========================================================================================
+  // 変更検知
+  // ========================================================================================
+
+  /**
+   * 未保存変更状態を設定
+   */
+  const setUnsavedChanges = useCallback((hasChanges) => {
+    setHasUnsavedChanges(hasChanges);
+  }, []);
+
+  // ========================================================================================
+  // 返り値
+  // ========================================================================================
+
+  return {
+    // ファイル情報
+    currentFilePath,
+    fileName: displayFileName,
+    hasUnsavedChanges,
+
+    // ファイル操作
+    saveFlow,
+    saveAsFlow,
+    openFlow,
+    newFlow,
+
+    // タブ管理
+    requestTabClose,
+
+    // 変更検知
+    setUnsavedChanges,
+
+    // フラグ
+    isSaving: isSaving.current,
+    isLoading: isLoading.current,
+  };
+};

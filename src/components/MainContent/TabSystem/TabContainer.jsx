@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { useTabManager } from "./hooks/useTabManager";
@@ -11,21 +11,41 @@ import ConsoleMsg from "../../../utils/ConsoleMsg";
 /**
  * タブシステムのメインコンテナコンポーネント
  */
-function TabContainer({ initialTabs }) {
-  const { selectedTab, setSelectedTab, openTabs, addTab, closeTab, getActiveTab } = useTabManager(initialTabs);
+function TabContainer({ initialTabs, onHistoryChange }) {
+  const { selectedTab, setSelectedTab, openTabs, addTab, closeTab, getActiveTab, updateTab } = useTabManager(initialTabs);
+
+  // 履歴情報を管理するstate
+  const [historyInfo, setHistoryInfo] = useState({
+    historyLength: 0,
+    currentHistoryIndex: -1,
+    canUndo: false,
+    canRedo: false,
+  });
+
+  // 履歴情報変更時のハンドラー
+  const handleHistoryChange = (newHistoryInfo) => {
+    setHistoryInfo(newHistoryInfo);
+    if (onHistoryChange) {
+      onHistoryChange(newHistoryInfo);
+    }
+  };
 
   // ウェルカム画面のアクションハンドラー
   const handleCreateNewFlow = () => {
-    addTab({
+    const newTabConfig = {
       id: `flow-editor-${Date.now()}`,
-      title: "未保存のフロー",
+      title: "NewFile",
       icon: "⧈", // ノードダイアグラムを表現する記号
       component: "FlowEditor",
       closable: true,
+      hasUnsavedChanges: false, // 新規ファイルは未保存状態として開始
       props: {
         initialMode: "empty", // 空のフローで開始
       },
-    });
+    };
+
+    console.log("Creating new tab with config:", newTabConfig);
+    addTab(newTabConfig);
   };
 
   const handleOpenProject = async () => {
@@ -60,6 +80,7 @@ function TabContainer({ initialTabs }) {
           icon: "📄",
           component: "FlowEditor",
           closable: true,
+          hasUnsavedChanges: false,
           props: {
             initialMode: "loaded",
             loadedData: flowData,
@@ -96,7 +117,22 @@ function TabContainer({ initialTabs }) {
       <TabHeader selectedTab={selectedTab} onSelectionChange={setSelectedTab} openTabs={openTabs} onCloseTab={closeTab} onAddTab={addTab} />
 
       {/* タブコンテンツ */}
-      <TabContent selectedTab={selectedTab} onSelectionChange={setSelectedTab} openTabs={openTabs} />
+      <TabContent
+        selectedTab={selectedTab}
+        onSelectionChange={setSelectedTab}
+        openTabs={openTabs}
+        onCreateNewTab={addTab}
+        onUpdateTab={updateTab}
+        onHistoryChange={handleHistoryChange}
+        onRequestTabClose={(tabId) => {
+          const tab = openTabs.find((t) => t.id === selectedTab);
+          if (tab && tab.component === "FlowEditor") {
+            // FlowEditorのrequestTabClose関数を呼び出すためのプロキシ
+            return closeTab(tabId, true);
+          }
+          return closeTab(tabId);
+        }}
+      />
     </div>
   );
 }

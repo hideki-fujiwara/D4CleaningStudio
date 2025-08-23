@@ -5,16 +5,19 @@ import FlowEditor from "../FlowEditor/FlowEditor";
 /**
  * タブコンテンツをレンダリングするコンポーネント
  */
-function TabContent({ selectedTab, onSelectionChange, openTabs }) {
+function TabContent({ selectedTab, onSelectionChange, openTabs, onCreateNewTab, onUpdateTab, onRequestTabClose, onHistoryChange }) {
   /**
    * タブの内容をレンダリングする
    */
   const renderTabContent = (tab) => {
     console.log("TabContent renderTabContent tab:", tab);
+    console.log("Tab component type:", tab.component);
+    console.log("Tab component === 'FlowEditor':", tab.component === "FlowEditor");
+
     switch (tab.component) {
       case "FlowEditor":
         console.log("Rendering FlowEditor with props:", tab.props);
-        return <FlowEditor {...(tab.props || {})} />;
+        return <FlowEditor {...(tab.props || {})} tabId={tab.id} onCreateNewTab={onCreateNewTab} onUpdateTab={onUpdateTab} onRequestTabClose={onRequestTabClose} onHistoryChange={onHistoryChange} />;
 
       case "DataViewer":
         return (

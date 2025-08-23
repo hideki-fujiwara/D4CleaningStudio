@@ -40,15 +40,18 @@ function TabHeader({ selectedTab, onSelectionChange, openTabs, onCloseTab, onAdd
             >
               <span className="flex items-center space-x-2 min-w-0">
                 <span className="text-base">{tab.icon}</span>
-                <span className="truncate">{tab.title}</span>
+                <span className="flex items-center">
+                  {tab.hasUnsavedChanges && <span className="text-error mr-1 font-bold">*</span>}
+                  <span className="truncate">{tab.title}</span>
+                </span>
               </span>
 
               {/* 閉じるボタン */}
               {tab.closable && (
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    onCloseTab(tab.id);
+                    await onCloseTab(tab.id);
                   }}
                   className="ml-2 p-1 rounded hover:bg-base-300 text-base-content hover:text-error transition-colors"
                   aria-label={`${tab.title}を閉じる`}

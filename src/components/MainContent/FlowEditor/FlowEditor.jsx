@@ -25,7 +25,17 @@ import { useHtmlDragAndDrop } from "./hooks/useHtmlDragAndDrop";
  * FlowEditorの内部実装
  * ReactFlowProvider内で動作する必要があるため分離
  */
-function FlowEditorInner({ initialMode, loadedData, filePath, fileName }) {
+function FlowEditorInner({ initialMode, loadedData, filePath, fileName, tabId, onCreateNewTab, onUpdateTab, onRequestTabClose, onHistoryChange }) {
+  console.log("FlowEditorInner - Props received:", {
+    initialMode,
+    loadedData,
+    filePath,
+    fileName,
+    onCreateNewTab: !!onCreateNewTab,
+    onRequestTabClose: !!onRequestTabClose,
+    onHistoryChange: !!onHistoryChange,
+  });
+
   // ========================================================================================
   // カスタムフック使用
   // ========================================================================================
@@ -53,6 +63,8 @@ function FlowEditorInner({ initialMode, loadedData, filePath, fileName }) {
     redo,
     canUndo,
     canRedo,
+    historyLength,
+    currentHistoryIndex,
     // ファイル保存機能
     saveFlow,
     saveAsFlow,
@@ -60,7 +72,21 @@ function FlowEditorInner({ initialMode, loadedData, filePath, fileName }) {
     openFlow,
     hasUnsavedChanges,
     fileName: displayFileName,
-  } = useFlowEditor(initialMode, loadedData, filePath, fileName);
+    requestTabClose,
+  } = useFlowEditor(initialMode, loadedData, filePath, fileName, tabId, onCreateNewTab, onUpdateTab, onRequestTabClose);
+
+  // 履歴情報が変更されたときに親に通知
+  React.useEffect(() => {
+    console.log("履歴情報が変更されました:", { historyLength, currentHistoryIndex, canUndo, canRedo });
+    if (onHistoryChange) {
+      onHistoryChange({
+        historyLength,
+        currentHistoryIndex,
+        canUndo,
+        canRedo,
+      });
+    }
+  }, [historyLength, currentHistoryIndex, canUndo, canRedo, onHistoryChange]);
 
   // ドラッグ&ドロップ（HTML5版）
   const { reactFlowWrapper, isDragOver, onDrop, onDragOver, onDragLeave } = useHtmlDragAndDrop(addNode);
@@ -131,6 +157,8 @@ function FlowEditorInner({ initialMode, loadedData, filePath, fileName }) {
         redo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
+        historyLength={historyLength}
+        currentHistoryIndex={currentHistoryIndex}
         saveFlow={saveFlow}
         saveAsFlow={saveAsFlow}
         newFlow={newFlow}
@@ -238,11 +266,33 @@ function FlowEditorInner({ initialMode, loadedData, filePath, fileName }) {
  * @param {Object} props.loadedData - ロードされたフローデータ
  * @param {string} props.filePath - ファイルパス
  * @param {string} props.fileName - ファイル名
+ * @param {Function} props.onCreateNewTab - 新しいタブを作成する関数
+ * @param {Function} props.onRequestTabClose - タブクローズ要求コールバック
  */
-function FlowEditor({ initialMode = "default", loadedData = null, filePath = null, fileName = "未保存のフロー" }) {
+function FlowEditor({ initialMode = "default", loadedData = null, filePath = null, fileName = "NewFile", tabId, onCreateNewTab, onUpdateTab, onRequestTabClose, onHistoryChange }) {
+  console.log("FlowEditor - Props received:", {
+    initialMode,
+    loadedData,
+    filePath,
+    fileName,
+    onCreateNewTab: !!onCreateNewTab,
+    onRequestTabClose: !!onRequestTabClose,
+    onHistoryChange: !!onHistoryChange,
+  });
+
   return (
     <ReactFlowProvider>
-      <FlowEditorInner initialMode={initialMode} loadedData={loadedData} filePath={filePath} fileName={fileName} />
+      <FlowEditorInner
+        initialMode={initialMode}
+        loadedData={loadedData}
+        filePath={filePath}
+        fileName={fileName}
+        tabId={tabId}
+        onCreateNewTab={onCreateNewTab}
+        onUpdateTab={onUpdateTab}
+        onRequestTabClose={onRequestTabClose}
+        onHistoryChange={onHistoryChange}
+      />
     </ReactFlowProvider>
   );
 }

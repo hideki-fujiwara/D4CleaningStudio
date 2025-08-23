@@ -13,10 +13,14 @@ export function useTabManager(initialTabs = []) {
    */
   const addTab = (tabConfig) => {
     const newTab = {
-      id: `tab-${Date.now()}`,
       ...tabConfig,
+      // idが既に提供されている場合はそれを使用、そうでなければ生成
+      id: tabConfig.id || `tab-${Date.now()}`,
       closable: true,
     };
+
+    console.log("useTabManager addTab - Original config:", tabConfig);
+    console.log("useTabManager addTab - Final newTab:", newTab);
 
     setOpenTabs((prev) => [...prev, newTab]);
     setSelectedTab(newTab.id);
@@ -26,11 +30,17 @@ export function useTabManager(initialTabs = []) {
   };
 
   /**
-   * タブを閉じる
+   * タブを閉じる（確認付き）
    */
-  const closeTab = (tabId) => {
+  const closeTab = async (tabId, requestTabClose = null) => {
     const tab = openTabs.find((t) => t.id === tabId);
     if (!tab || !tab.closable) return;
+
+    // FlowEditorの場合は保存確認を行う
+    if (tab.component === "FlowEditor" && requestTabClose) {
+      const canClose = await requestTabClose();
+      if (!canClose) return; // ユーザーがキャンセルした場合
+    }
 
     setOpenTabs((prev) => {
       const newTabs = prev.filter((t) => t.id !== tabId);
@@ -91,6 +101,19 @@ export function useTabManager(initialTabs = []) {
     return openTabs.find((tab) => tab.id === selectedTab) || null;
   };
 
+  /**
+   * タブの情報を更新する
+   */
+  const updateTab = (tabId, updates) => {
+    setOpenTabs((prev) => prev.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab)));
+    // ログレベルを下げる
+    if (updates.hasUnsavedChanges !== undefined) {
+      console.log(`タブの未保存状態更新: ${tabId} -> ${updates.hasUnsavedChanges}`);
+    } else {
+      ConsoleMsg("info", `タブを更新しました: ${tabId}`, updates);
+    }
+  };
+
   return {
     selectedTab,
     setSelectedTab,
@@ -101,5 +124,6 @@ export function useTabManager(initialTabs = []) {
     closeAllClosableTabs,
     hasTab,
     getActiveTab,
+    updateTab,
   };
 }
