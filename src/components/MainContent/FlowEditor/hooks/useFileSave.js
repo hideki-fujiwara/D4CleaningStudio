@@ -11,8 +11,8 @@
  */
 
 import { useState, useCallback, useRef } from "react";
-import { save, open } from "@tauri-apps/plugin-dialog";
-import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 import ConsoleMsg from "../../../../utils/ConsoleMsg";
 
 /**
@@ -22,9 +22,6 @@ import ConsoleMsg from "../../../../utils/ConsoleMsg";
  * @param {Function} params.exportFlowData - フローデータ出力関数
  * @param {Function} params.getNodes - ノード取得関数
  * @param {Function} params.getEdges - エッジ取得関数
- * @param {Function} params.setNodes - ノード設定関数
- * @param {Function} params.setEdges - エッジ設定関数
- * @param {Function} params.setNodeCounter - ノードカウンター設定関数
  * @param {number} params.nodeCounter - 現在のノードカウンター
  * @param {string} params.initialFilePath - 初期ファイルパス
  * @param {string} params.initialFileName - 初期ファイル名
@@ -32,7 +29,7 @@ import ConsoleMsg from "../../../../utils/ConsoleMsg";
  * @param {Function} params.onHistoryReset - 履歴リセットコールバック
  * @returns {Object} ファイル保存機能
  */
-export const useFileSave = ({ exportFlowData, getNodes, getEdges, setNodes, setEdges, setNodeCounter, nodeCounter, initialFilePath, initialFileName, onCreateNewTab, onHistoryReset }) => {
+export const useFileSave = ({ exportFlowData, getNodes, getEdges, nodeCounter, initialFilePath, initialFileName, onCreateNewTab, onHistoryReset }) => {
   // ========================================================================================
   // 状態管理
   // ========================================================================================
@@ -55,7 +52,7 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, setNodes, setE
   // 保存処理中フラグ
   const isSaving = useRef(false);
 
-  // ファイル読み込み中フラグ
+  // ファイル読み込み中フラグ（削除予定 - useFileLoadに移行）
   const isLoading = useRef(false);
 
   // ========================================================================================
@@ -246,73 +243,6 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, setNodes, setE
   }, [exportFlowData, displayFileName, getDefaultSavePath, onHistoryReset, onCreateNewTab, getNodes, getEdges, nodeCounter]);
 
   /**
-   * ファイルを開く機能（Ctrl+O）
-   */
-  const openFlow = useCallback(async () => {
-    try {
-      if (hasUnsavedChanges) {
-        const result = confirm("未保存の変更があります。ファイルを開きますか？変更は失われます。");
-        if (!result) return;
-      }
-
-      // Tauriのファイル選択ダイアログを表示
-      const filePath = await open({
-        filters: [
-          {
-            name: "D4 Flow Files",
-            extensions: ["d4flow"],
-          },
-          {
-            name: "JSON Files",
-            extensions: ["json"],
-          },
-        ],
-      });
-
-      if (filePath) {
-        // ファイル読み込み中フラグを設定
-        isLoading.current = true;
-
-        const fileContent = await readTextFile(filePath);
-        const flowData = JSON.parse(fileContent);
-
-        if (flowData && typeof flowData === "object") {
-          // フローデータを設定
-          setNodes(flowData.nodes || []);
-          setEdges(flowData.edges || []);
-          setNodeCounter(flowData.nodeCounter || 1);
-
-          // ファイル名を抽出
-          const fileNameOnly = filePath
-            .split(/[\\/]/)
-            .pop()
-            .replace(/\.[^/.]+$/, "");
-
-          // ファイル状態を更新
-          setCurrentFilePath(filePath);
-          setDisplayFileName(fileNameOnly);
-          setHasUnsavedChanges(false);
-
-          // 履歴をリセット
-          if (onHistoryReset) {
-            onHistoryReset();
-          }
-
-          ConsoleMsg("success", `ファイルを開きました: ${fileNameOnly}`);
-        } else {
-          ConsoleMsg("error", "無効なファイル形式です");
-        }
-      }
-    } catch (error) {
-      ConsoleMsg("error", `ファイルの読み込みに失敗しました: ${error.message}`);
-      console.error("ファイル読み込みエラー:", error);
-    } finally {
-      // ファイル読み込み完了後にフラグをリセット
-      isLoading.current = false;
-    }
-  }, [hasUnsavedChanges, setNodes, setEdges, setNodeCounter, onHistoryReset]);
-
-  /**
    * 新規ファイル作成機能（Ctrl+N）
    */
   const newFlow = useCallback(() => {
@@ -333,25 +263,10 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, setNodes, setE
           initialMode: "empty",
         },
       });
-    } else {
-      // 現在のタブをリセット
-      setNodes([]);
-      setEdges([]);
-      setNodeCounter(1);
-
-      // ファイル状態をリセット
-      setCurrentFilePath(null);
-      setDisplayFileName("NewFile");
-      setHasUnsavedChanges(false);
-
-      // 履歴もリセット
-      if (onHistoryReset) {
-        onHistoryReset();
-      }
-
-      ConsoleMsg("info", "新規フローを作成しました");
     }
-  }, [hasUnsavedChanges, onCreateNewTab, setNodes, setEdges, setNodeCounter, onHistoryReset]);
+
+    ConsoleMsg("info", "新規フローを作成しました");
+  }, [hasUnsavedChanges, onCreateNewTab]);
 
   // ========================================================================================
   // タブクローズ確認
@@ -390,6 +305,20 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, setNodes, setE
     setHasUnsavedChanges(hasChanges);
   }, []);
 
+  /**
+   * ファイルパスを設定（外部から呼び出し用）
+   */
+  const setCurrentFilePathExternal = useCallback((filePath) => {
+    setCurrentFilePath(filePath);
+  }, []);
+
+  /**
+   * ファイル名を設定（外部から呼び出し用）
+   */
+  const setDisplayFileNameExternal = useCallback((fileName) => {
+    setDisplayFileName(fileName);
+  }, []);
+
   // ========================================================================================
   // 返り値
   // ========================================================================================
@@ -403,7 +332,6 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, setNodes, setE
     // ファイル操作
     saveFlow,
     saveAsFlow,
-    openFlow,
     newFlow,
 
     // タブ管理
@@ -411,6 +339,8 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, setNodes, setE
 
     // 変更検知
     setUnsavedChanges,
+    setCurrentFilePath: setCurrentFilePathExternal,
+    setDisplayFileName: setDisplayFileNameExternal,
 
     // フラグ
     isSaving: isSaving.current,

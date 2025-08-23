@@ -29,6 +29,10 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  // 環境変数の定義
+  define: {
+    "import.meta.env.REACT_APP_DEBUG_MODE": JSON.stringify(process.env.REACT_APP_DEBUG_MODE),
+  },
   build: {
     target: "esnext", // またはより新しいターゲット
   },

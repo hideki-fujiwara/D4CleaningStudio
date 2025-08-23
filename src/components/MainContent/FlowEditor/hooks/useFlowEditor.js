@@ -6,15 +6,26 @@
  * FlowEditorの主要機能を提供するカスタムフック
  * 保存機能と履歴管理機能を分離した軽量版
  *
+ * キーボードショートカット:
+ * - Ctrl+Z: Undo（取り消し）
+ * - Ctrl+Y / Ctrl+Shift+Z: Redo（やり直し）
+ * - Ctrl+S: Save（保存）
+ * - Ctrl+Shift+S: Save As（名前をつけて保存）
+ * - Ctrl+O: Open（ファイルを開く）
+ * - Ctrl+N: New（新規ファイル）
+ * - Ctrl+R: Reset（フローリセット）
+ *
  * @author D4CleaningStudio
  * @version 2.0.0 (Refactored)
  */
 import { useCallback, useState, useRef, useEffect } from "react";
 import { useNodesState, useEdgesState, addEdge, useReactFlow } from "reactflow";
 import ConsoleMsg from "../../../../utils/ConsoleMsg";
+import DebugConfig from "../../../../utils/DebugConfig";
 import { initialNodes, initialEdges } from "../data/initialData";
 import { useCopyPaste } from "./useCopyPaste";
 import { useFileSave } from "./useFileSave";
+import { useFileLoad } from "./useFileLoad";
 import { useHistory } from "./useHistory";
 
 /**
@@ -104,7 +115,7 @@ export const useFlowEditor = (
     setNodes,
     setEdges,
     onHistoryChange: (historyInfo) => {
-      // 履歴変更をFlowEditorInnerに通知
+      // 履歴変更をFlowEditorInnerに通知（useFileLoadフック分離後も継続）
       console.log("履歴情報変更:", historyInfo);
     }
   });
@@ -123,14 +134,31 @@ export const useFlowEditor = (
     }),
     getNodes: () => nodes,
     getEdges: () => edges,
-    setNodes,
-    setEdges,
-    setNodeCounter,
     nodeCounter,
     initialFilePath: filePath,
     initialFileName: fileName,
     onCreateNewTab,
     onHistoryReset: historyHook.resetHistory
+  });
+
+  // ========================================================================================
+  // ファイル読み込みフック
+  // ========================================================================================
+
+  const fileLoadHook = useFileLoad({
+    setNodes,
+    setEdges,
+    setNodeCounter,
+    onFileLoaded: (fileInfo) => {
+      // ファイル読み込み完了時の処理
+      fileSaveHook.setCurrentFilePath(fileInfo.filePath);
+      fileSaveHook.setDisplayFileName(fileInfo.fileName);
+      fileSaveHook.setUnsavedChanges(false);
+    },
+    onHistoryReset: historyHook.resetHistory,
+    onHistoryInitialize: historyHook.initializeHistory,
+    onCreateNewTab,
+    hasUnsavedChanges: () => fileSaveHook.hasUnsavedChanges
   });
 
   // ========================================================================================
@@ -140,21 +168,28 @@ export const useFlowEditor = (
   // ファイル読み込み完了後に履歴をクリア（一度だけ実行）
   const [isInitialized, setIsInitialized] = useState(false);
   
+  // デバッグ情報を確実に出力するuseEffect
+  useEffect(() => {
+    DebugConfig.logDebugInfo();
+  }, []); // 初回のみ実行
+
   useEffect(() => {
     if (initialMode === "loaded" && !isInitialized) {
-      console.log("ファイル読み込みモード - 履歴リセット開始");
+      console.log("ファイル読み込みモード - 履歴初期化開始");
       // 履歴をリセット
       historyHook.resetHistory();
       historyHook.setLoadingFlag(true);
       
       setTimeout(() => {
         historyHook.setLoadingFlag(false);
-        ConsoleMsg("info", "ファイル読み込み完了：履歴をリセットしました");
-      }, 100);
+        // 読み込み完了後、現在の状態を履歴の基準として初期化
+        historyHook.initializeHistory(nodes, edges);
+        ConsoleMsg("info", "ファイル読み込み完了：履歴を初期化しました");
+      }, 200);
       
       setIsInitialized(true);
     }
-  }, [initialMode, isInitialized]); // historyHookを依存配列から削除
+  }, [initialMode, isInitialized, nodes, edges]);
 
   // ========================================================================================
   // ノード操作
@@ -268,6 +303,9 @@ export const useFlowEditor = (
 
   // リセット機能
   const onReset = useCallback(() => {
+    console.log("onReset が呼び出されました");
+    console.trace("onReset の呼び出し元を確認");
+    
     const resetNodes = initialMode === "empty" ? [] : initialNodes;
     const resetEdges = initialMode === "empty" ? [] : initialEdges;
     
@@ -319,22 +357,39 @@ export const useFlowEditor = (
   // 最新のフック関数を参照するためのRef
   const historyHookRef = useRef();
   const fileSaveHookRef = useRef();
+  const fileLoadHookRef = useRef();
   
   // Refを更新
   historyHookRef.current = historyHook;
   fileSaveHookRef.current = fileSaveHook;
+  fileLoadHookRef.current = fileLoadHook;
 
   useEffect(() => {
     const handleKeyDown = (event) => {
+      // デバッグ用：キー情報をログ出力
+      if (event.ctrlKey && (event.key === "r" || event.key === "R")) {
+        console.log("キー情報:", {
+          key: event.key,
+          code: event.code,
+          ctrlKey: event.ctrlKey,
+          shiftKey: event.shiftKey,
+          altKey: event.altKey,
+          metaKey: event.metaKey
+        });
+      }
+
       // Ctrl+Z（取り消し）
-      if (event.ctrlKey && event.key === "z" && !event.shiftKey) {
+      if (event.ctrlKey && (event.key === "z" || event.key === "Z") && !event.shiftKey) {
         event.preventDefault();
+        console.log(`Undo実行: Ctrl+${event.key}`);
         historyHookRef.current.undo();
       }
 
-      // Ctrl+Y または Ctrl+Shift+Z（やり直し）
-      if (event.ctrlKey && (event.key === "y" || (event.key === "z" && event.shiftKey))) {
+      // Ctrl+Y または Ctrl+Shift+Z（やり直し）- 一般的な2つのパターンに対応
+      if (event.ctrlKey && ((event.key === "y" || event.key === "Y") || ((event.key === "z" || event.key === "Z") && event.shiftKey))) {
         event.preventDefault();
+        const keyCombo = event.shiftKey ? `Shift+${event.key}` : event.key;
+        console.log(`Redo実行: Ctrl+${keyCombo}`);
         historyHookRef.current.redo();
       }
 
@@ -353,7 +408,7 @@ export const useFlowEditor = (
       // Ctrl+O（ファイルを開く）
       if (event.ctrlKey && event.key === "o") {
         event.preventDefault();
-        fileSaveHookRef.current.openFlow();
+        fileLoadHookRef.current.openFlow();
       }
 
       // Ctrl+N（新規ファイル）
@@ -361,11 +416,39 @@ export const useFlowEditor = (
         event.preventDefault();
         fileSaveHookRef.current.newFlow();
       }
+
+      // Ctrl+R（リセット）- ブラウザのリロードを防ぐ
+      if (event.ctrlKey && (event.key === "r" || event.key === "R")) {
+        event.preventDefault();
+        event.stopPropagation(); // イベントの伝播も停止
+        console.log(`FlowEditor: Ctrl+${event.key} キーボードショートカットでリセット実行`);
+        ConsoleMsg("info", `Ctrl+${event.key}: フローをリセットします`);
+        onReset();
+      }
+
+      // F5（リロード）処理 - 設定に基づいて制御
+      if (event.key === "F5") {
+        const isDebugMode = DebugConfig.isDebugMode;
+        const allowReload = DebugConfig.allowF5Reload;
+        
+        console.log(`🔄 F5キー押下 - デバッグモード: ${isDebugMode}, リロード許可: ${allowReload}`);
+        
+        if (!allowReload) {
+          event.preventDefault();
+          event.stopPropagation();
+          console.log("❌ F5 リロードを防止（本番モード）");
+          ConsoleMsg("info", "F5 リロードを防止（本番モード）");
+        } else {
+          console.log("✅ F5 リロードを許可（デバッグモード）");
+          ConsoleMsg("info", "F5 リロードを許可（デバッグモード）");
+        }
+      }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
+    // キャプチャフェーズでイベントを捕捉
+    document.addEventListener("keydown", handleKeyDown, true);
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown, true);
     };
   }, []); // 空の依存配列で一度だけ登録
 
@@ -417,16 +500,22 @@ export const useFlowEditor = (
     canRedo: historyHook.canRedo,
     historyLength: historyHook.historyLength,
     currentHistoryIndex: historyHook.currentHistoryIndex,
+    initializeHistory: historyHook.initializeHistory,
 
     // ファイル保存
     saveFlow: fileSaveHook.saveFlow,
     saveAsFlow: fileSaveHook.saveAsFlow,
-    openFlow: fileSaveHook.openFlow,
     newFlow: fileSaveHook.newFlow,
     currentFilePath: fileSaveHook.currentFilePath,
     fileName: fileSaveHook.fileName,
     hasUnsavedChanges: fileSaveHook.hasUnsavedChanges,
     requestTabClose: fileSaveHook.requestTabClose,
+
+    // ファイル読み込み
+    openFlow: fileLoadHook.openFlow,
+    openFlowInNewTab: fileLoadHook.openFlowInNewTab,
+    loadFlowData: fileLoadHook.loadFlowData,
+    isLoadingFile: fileLoadHook.isLoadingFile,
 
     // ユーティリティ
     screenToFlowPosition,

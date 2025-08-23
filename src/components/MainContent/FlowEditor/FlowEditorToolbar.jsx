@@ -373,7 +373,13 @@ const NodeAdditionGroup = ({ onAddTextNode, onAddSimpleNode, onAddCsvNode }) => 
  */
 const FlowOperationsGroup = ({ onReset, onClearAll }) => (
   <Group className="flex items-center gap-1">
-    <TooltipButton tooltip="フローを初期状態にリセット" onPress={onReset}>
+    <TooltipButton
+      tooltip="フローを初期状態にリセット"
+      onPress={() => {
+        console.log("ツールバー: リセットボタンがクリックされました");
+        onReset();
+      }}
+    >
       <ResetIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 

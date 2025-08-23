@@ -69,6 +69,14 @@ function App() {
       ConsoleMsg("info", "Ctrl+0 キーが押下されました");
       resetFontSize(); // フォントサイズリセット
     }
+
+    // Ctrl + R キー（リロード防止）
+    if ((event.ctrlKey || event.metaKey) && (event.key === "r" || event.key === "R")) {
+      event.preventDefault();
+      ConsoleMsg("info", `Ctrl+${event.key} キーが押下されました（リロードを防止）`);
+      // FlowEditorがアクティブな場合はリセット機能として動作
+      // ここではブラウザのリロードを防ぐのみ
+    }
   }, []);
 
   // ========================================================================================

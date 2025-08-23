@@ -1,13 +1,15 @@
 {
-  "name": "D4CleaningStudio",
+  "name": "d4-cleaning-studio",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:debug": "cross-env REACT_APP_DEBUG_MODE=true vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "tauri:debug": "cross-env REACT_APP_DEBUG_MODE=true tauri dev"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -35,6 +37,7 @@
     "@iconify/json": "^2.2.369",
     "@tauri-apps/cli": "^2",
     "@vitejs/plugin-react": "^4.3.4",
+    "cross-env": "^10.0.0",
     "react-aria-components": "^1.10.1",
     "vite": "^6.0.3"
   }

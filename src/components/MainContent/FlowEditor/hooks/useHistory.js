@@ -64,10 +64,25 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
       };
 
       setHistory((prev) => {
-        // 最新の履歴と比較して変化がない場合は保存しない
-        if (prev.length > 0) {
-          const lastState = prev[prev.length - 1];
+        // 基準状態がある場合（履歴配列に1つエントリがあるがcurrentHistoryIndex=0の場合）
+        let baselineState = null;
+        let actualHistory = prev;
 
+        if (prev.length === 1 && currentHistoryIndex === 0) {
+          // 基準状態を保持
+          baselineState = prev[0];
+          actualHistory = [];
+        }
+
+        // 最新の履歴と比較して変化がない場合は保存しない
+        let lastState = null;
+        if (actualHistory.length > 0) {
+          lastState = actualHistory[actualHistory.length - 1];
+        } else if (baselineState) {
+          lastState = baselineState;
+        }
+
+        if (lastState) {
           // ノードとエッジの内容を比較（タイムスタンプを除く）
           const isNodesEqual = JSON.stringify(lastState.nodes) === JSON.stringify(newState.nodes);
           const isEdgesEqual = JSON.stringify(lastState.edges) === JSON.stringify(newState.edges);
@@ -77,26 +92,48 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
           }
         }
 
-        // 現在のインデックス以降の履歴を削除（新しい操作が行われた場合）
-        const newHistory = prev.slice(0, currentHistoryIndex);
-        newHistory.push(newState);
-
-        // 履歴サイズ制限
-        if (newHistory.length > maxHistorySize) {
-          newHistory.shift();
-          setCurrentHistoryIndex((prev) => Math.max(1, prev - 1));
+        // 新しい履歴配列を構築
+        let newHistory;
+        if (baselineState) {
+          // 基準状態 + 実際の履歴 + 新しい状態
+          newHistory = [baselineState, ...actualHistory, newState];
         } else {
-          setCurrentHistoryIndex(newHistory.length);
+          // 現在のインデックス以降の履歴を削除（新しい操作が行われた場合）
+          newHistory = actualHistory.slice(0, currentHistoryIndex);
+          newHistory.push(newState);
         }
 
-        ConsoleMsg("info", `履歴を保存しました (${newHistory.length}/${maxHistorySize})`);
+        // 履歴サイズ制限（基準状態は除いて計算）
+        const actualHistoryLength = baselineState ? newHistory.length - 1 : newHistory.length;
+        if (actualHistoryLength > maxHistorySize) {
+          if (baselineState) {
+            // 基準状態を保持して古い履歴を削除
+            newHistory = [baselineState, ...newHistory.slice(2)];
+          } else {
+            newHistory.shift();
+          }
+          setCurrentHistoryIndex((prev) => Math.max(1, prev - 1));
+        } else {
+          // 基準状態がある場合とない場合でcurrentHistoryIndexを適切に設定
+          if (baselineState) {
+            // 基準状態がある場合: 実際の履歴件数 + 1（基準状態分）
+            setCurrentHistoryIndex(actualHistoryLength + 1);
+          } else {
+            // 基準状態がない場合: 通常通り
+            setCurrentHistoryIndex(newHistory.length);
+          }
+        }
+
+        const displayHistoryLength = baselineState ? actualHistoryLength : newHistory.length;
+        console.log(`履歴保存: 表示履歴長=${displayHistoryLength}, 実際配列長=${newHistory.length}, currentIndex=${baselineState ? actualHistoryLength + 1 : newHistory.length}`);
+        ConsoleMsg("info", `履歴を保存しました (${displayHistoryLength}/${maxHistorySize})`);
 
         // 履歴変更を通知
         if (onHistoryChange) {
           onHistoryChange({
-            historyLength: newHistory.length,
-            currentHistoryIndex: newHistory.length,
-            canUndo: newHistory.length > 0,
+            historyLength: displayHistoryLength,
+            currentHistoryIndex: displayHistoryLength, // 表示用は実際の操作履歴件数
+            canUndo: displayHistoryLength > 0,
             canRedo: false,
           });
         }
@@ -109,43 +146,97 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
 
   /**
    * 取り消し（Undo）
+   *
+   * 履歴配列の構造:
+   * - 基準状態がある場合: [基準状態, 操作1, 操作2, ...]
+   * - 基準状態がない場合: [操作1, 操作2, ...]
+   *
+   * currentHistoryIndex:
+   * - 0: 基準状態（表示上は履歴件数0、履歴位置0）
+   * - 1: 最初の操作（表示上は履歴件数1、履歴位置1）
+   * - 2: 2番目の操作（表示上は履歴件数2、履歴位置2）
    */
   const undo = useCallback(() => {
+    console.log(`Undo開始: currentIndex=${currentHistoryIndex}, historyLength=${history.length}`);
+
     if (currentHistoryIndex > 0) {
       const prevIndex = currentHistoryIndex - 1;
-      const prevState = prevIndex > 0 ? history[prevIndex - 1] : null; // 1ベースなので-1してアクセス
 
       // 履歴復元中フラグを立てる
       isRestoringHistory.current = true;
 
       if (prevIndex === 0) {
-        // 初期状態に戻る
-        setNodes([]);
-        setEdges([]);
+        // 基準状態に戻る（履歴配列の最初の要素）
+        if (history.length > 0) {
+          const baselineState = history[0];
+          console.log("基準状態に戻る:", { nodes: baselineState.nodes.length, edges: baselineState.edges.length });
+
+          setNodes(baselineState.nodes);
+          setEdges(baselineState.edges);
+          setCurrentHistoryIndex(0);
+
+          // 履歴変更を通知（履歴件数0として表示）
+          if (onHistoryChange) {
+            onHistoryChange({
+              historyLength: 0,
+              currentHistoryIndex: 0,
+              canUndo: false,
+              canRedo: history.length > 1,
+            });
+          }
+
+          ConsoleMsg("info", "基準状態に戻りました（履歴件数: 0、履歴位置: 0）");
+        }
       } else {
-        // 前の履歴状態に戻る
+        // 通常の履歴復元
+        // 基準状態がある場合は適切なインデックスでアクセス
+        const hasBaseline = history.length > 1 && currentHistoryIndex > 1;
+        let prevState;
+
+        if (hasBaseline) {
+          // 基準状態がある場合: prevIndex=1なら基準状態、prevIndex>1なら実際の履歴
+          if (prevIndex === 1) {
+            prevState = history[0]; // 基準状態
+            console.log("基準状態へ戻る（prevIndex=1）");
+          } else {
+            prevState = history[prevIndex - 1];
+            console.log(`履歴復元: history[${prevIndex - 1}]`);
+          }
+        } else {
+          // 基準状態がない場合: 通常の履歴アクセス
+          prevState = history[prevIndex - 1];
+          console.log(`通常履歴復元: history[${prevIndex - 1}]`);
+        }
+
+        console.log("復元する状態:", { nodes: prevState.nodes.length, edges: prevState.edges.length });
+
         setNodes(prevState.nodes);
         setEdges(prevState.edges);
-      }
+        setCurrentHistoryIndex(prevIndex);
 
-      setCurrentHistoryIndex(prevIndex);
+        // 表示用履歴件数調整
+        const displayHistoryLength = hasBaseline ? history.length - 1 : history.length;
+        const displayCurrentIndex = hasBaseline ? prevIndex - 1 : prevIndex;
+
+        console.log(`Undo結果: 表示履歴長=${displayHistoryLength}, 表示位置=${displayCurrentIndex}, 実際位置=${prevIndex}`);
+
+        // 履歴変更を通知
+        if (onHistoryChange) {
+          onHistoryChange({
+            historyLength: displayHistoryLength,
+            currentHistoryIndex: displayCurrentIndex,
+            canUndo: prevIndex > 0,
+            canRedo: prevIndex < history.length,
+          });
+        }
+
+        ConsoleMsg("info", `操作を取り消しました (位置: ${displayCurrentIndex}/${displayHistoryLength})`);
+      }
 
       // フラグを戻す
       setTimeout(() => {
         isRestoringHistory.current = false;
       }, 100);
-
-      // 履歴変更を通知
-      if (onHistoryChange) {
-        onHistoryChange({
-          historyLength: history.length,
-          currentHistoryIndex: prevIndex,
-          canUndo: prevIndex > 0,
-          canRedo: prevIndex < history.length,
-        });
-      }
-
-      ConsoleMsg("info", `操作を取り消しました (${prevIndex}/${history.length})`);
     } else {
       ConsoleMsg("warning", "これ以上取り消しできません");
     }
@@ -153,14 +244,40 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
 
   /**
    * やり直し（Redo）
+   *
+   * 履歴配列の構造:
+   * - 基準状態がある場合: [基準状態, 操作1, 操作2, ...]
+   * - 基準状態がない場合: [操作1, 操作2, ...]
+   *
+   * currentHistoryIndex:
+   * - 0: 基準状態（表示上は履歴件数0）
+   * - 1: 最初の操作（表示上は履歴件数1）
+   * - 2: 2番目の操作（表示上は履歴件数2）
    */
   const redo = useCallback(() => {
+    console.log(`Redo開始: currentIndex=${currentHistoryIndex}, historyLength=${history.length}`);
+
     if (currentHistoryIndex < history.length) {
       const nextIndex = currentHistoryIndex + 1;
-      const nextState = history[nextIndex - 1]; // 1ベースなので-1してアクセス
 
       // 履歴復元中フラグを立てる
       isRestoringHistory.current = true;
+
+      // 基準状態がある場合の特別処理
+      const hasBaseline = history.length > 1 && currentHistoryIndex === 0;
+
+      let nextState;
+      if (hasBaseline && nextIndex === 1) {
+        // 基準状態(index=0)から最初の操作履歴(index=1)への復帰
+        nextState = history[1]; // 2番目の要素が最初の操作履歴
+        console.log("基準状態から最初の操作履歴へ復帰");
+      } else {
+        // 通常の履歴復元
+        nextState = history[nextIndex - 1];
+        console.log(`通常の履歴復元: history[${nextIndex - 1}]`);
+      }
+
+      console.log("復元する状態:", { nodes: nextState.nodes.length, edges: nextState.edges.length });
 
       setNodes(nextState.nodes);
       setEdges(nextState.edges);
@@ -171,17 +288,23 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
         isRestoringHistory.current = false;
       }, 100);
 
+      // 表示用履歴件数調整
+      const displayHistoryLength = hasBaseline ? history.length - 1 : history.length;
+      const displayCurrentIndex = hasBaseline ? nextIndex - 1 : nextIndex;
+
+      console.log(`Redo結果: 表示履歴長=${displayHistoryLength}, 表示位置=${displayCurrentIndex}, 実際位置=${nextIndex}`);
+
       // 履歴変更を通知
       if (onHistoryChange) {
         onHistoryChange({
-          historyLength: history.length,
-          currentHistoryIndex: nextIndex,
+          historyLength: displayHistoryLength,
+          currentHistoryIndex: displayCurrentIndex,
           canUndo: nextIndex > 0,
           canRedo: nextIndex < history.length,
         });
       }
 
-      ConsoleMsg("info", `操作をやり直しました (${nextIndex}/${history.length})`);
+      ConsoleMsg("info", `操作をやり直しました (位置: ${displayCurrentIndex}/${displayHistoryLength})`);
     } else {
       ConsoleMsg("warning", "これ以上やり直しできません");
     }
@@ -209,6 +332,39 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
   }, [onHistoryChange]);
 
   /**
+   * 履歴を初期化（初期状態を履歴番号0として設定）
+   * ファイル読み込み後などで使用
+   */
+  const initializeHistory = useCallback(
+    (nodes, edges) => {
+      console.log("履歴初期化実行 - 現在の状態を基準状態として設定（履歴件数は0のまま）");
+
+      const initialState = {
+        nodes: JSON.parse(JSON.stringify(nodes)),
+        edges: JSON.parse(JSON.stringify(edges)),
+        timestamp: Date.now(),
+      };
+
+      // 基準状態として保存するが、履歴件数は0のまま
+      setHistory([initialState]);
+      setCurrentHistoryIndex(0); // 履歴件数0を示す
+
+      // 履歴変更を通知
+      if (onHistoryChange) {
+        onHistoryChange({
+          historyLength: 0, // 見た目の履歴件数は0
+          currentHistoryIndex: 0,
+          canUndo: false, // 基準状態なのでUndoできない
+          canRedo: false,
+        });
+      }
+
+      ConsoleMsg("info", "履歴を初期化しました（基準状態設定、履歴件数: 0）");
+    },
+    [onHistoryChange]
+  );
+
+  /**
    * フラグ設定
    */
   const setSavingFlag = useCallback((isSavingValue) => {
@@ -223,17 +379,32 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
   // 返り値
   // ========================================================================================
 
+  // 表示用履歴長の計算
+  const displayHistoryLength = () => {
+    if (history.length === 1 && currentHistoryIndex === 0) {
+      // 基準状態のみの場合は履歴件数0
+      return 0;
+    } else if (history.length > 0 && currentHistoryIndex > 0) {
+      // 基準状態がある場合は-1して表示
+      return history.length - 1;
+    } else {
+      // 通常の履歴
+      return history.length;
+    }
+  };
+
   return {
     // 履歴情報
     history,
     currentHistoryIndex,
-    historyLength: history.length,
+    historyLength: displayHistoryLength(),
 
     // 履歴操作
     saveToHistory,
     undo,
     redo,
     resetHistory,
+    initializeHistory,
 
     // 状態判定
     canUndo: currentHistoryIndex > 0,
