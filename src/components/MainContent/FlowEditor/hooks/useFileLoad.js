@@ -174,6 +174,7 @@ export const useFileLoad = ({ setNodes, setEdges, setNodeCounter, onFileLoaded =
 
           // 新しいタブを作成してファイルを開く
           onCreateNewTab({
+            id: `flow-editor-${Date.now()}`,
             title: fileNameOnly,
             icon: "📄",
             component: "FlowEditor",

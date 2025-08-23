@@ -98,7 +98,7 @@ function TabContainer({ initialTabs, onHistoryChange }) {
 
   const handleOpenSample = () => {
     addTab({
-      id: `sample-flow-${Date.now()}`,
+      id: `flow-editor-${Date.now()}`,
       title: "サンプルフロー",
       icon: "🎯",
       component: "FlowEditor",

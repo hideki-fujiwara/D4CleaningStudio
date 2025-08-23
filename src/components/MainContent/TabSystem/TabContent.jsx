@@ -10,14 +10,19 @@ function TabContent({ selectedTab, onSelectionChange, openTabs, onCreateNewTab, 
    * タブの内容をレンダリングする
    */
   const renderTabContent = (tab) => {
-    console.log("TabContent renderTabContent tab:", tab);
-    console.log("Tab component type:", tab.component);
-    console.log("Tab component === 'FlowEditor':", tab.component === "FlowEditor");
-
     switch (tab.component) {
       case "FlowEditor":
-        console.log("Rendering FlowEditor with props:", tab.props);
-        return <FlowEditor {...(tab.props || {})} tabId={tab.id} onCreateNewTab={onCreateNewTab} onUpdateTab={onUpdateTab} onRequestTabClose={onRequestTabClose} onHistoryChange={onHistoryChange} />;
+        return (
+          <FlowEditor
+            key={tab.id}
+            {...(tab.props || {})}
+            tabId={tab.id}
+            onCreateNewTab={onCreateNewTab}
+            onUpdateTab={onUpdateTab}
+            onRequestTabClose={onRequestTabClose}
+            onHistoryChange={onHistoryChange}
+          />
+        );
 
       case "DataViewer":
         return (
@@ -108,14 +113,13 @@ function TabContent({ selectedTab, onSelectionChange, openTabs, onCreateNewTab, 
   };
 
   return (
-    <div className="flex-1 overflow-hidden">
-      <Tabs selectedKey={selectedTab} onSelectionChange={onSelectionChange} className="h-full">
-        {openTabs.map((tab) => (
-          <TabPanel key={tab.id} id={tab.id} className="h-full overflow-hidden">
-            {renderTabContent(tab)}
-          </TabPanel>
-        ))}
-      </Tabs>
+    <div className="flex-1 overflow-hidden relative">
+      {/* すべてのタブのコンテンツを常に描画し、絶対配置で表示・非表示を制御 */}
+      {openTabs.map((tab) => (
+        <div key={tab.id} className={`absolute inset-0 w-full h-full ${selectedTab === tab.id ? "z-10" : "z-0 opacity-0 pointer-events-none"}`}>
+          {renderTabContent(tab)}
+        </div>
+      ))}
     </div>
   );
 }

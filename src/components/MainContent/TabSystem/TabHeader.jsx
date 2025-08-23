@@ -32,37 +32,39 @@ function TabHeader({ selectedTab, onSelectionChange, openTabs, onCloseTab, onAdd
       {/* タブリスト */}
       <Tabs selectedKey={selectedTab} onSelectionChange={onSelectionChange} className="flex-1 flex">
         <TabList className="flex">
-          {openTabs.map((tab) => (
-            <Tab
-              key={tab.id}
-              id={tab.id}
-              className="group relative flex items-center px-4 py-2 text-sm font-medium border-r border-base-300 bg-base-200 hover:bg-base-300 selected:bg-base-100 selected:text-primary cursor-pointer min-w-0"
-            >
-              <span className="flex items-center space-x-2 min-w-0">
-                <span className="text-base">{tab.icon}</span>
-                <span className="flex items-center">
-                  {tab.hasUnsavedChanges && <span className="text-error mr-1 font-bold">*</span>}
-                  <span className="truncate">{tab.title}</span>
+          {openTabs.map((tab) => {
+            return (
+              <Tab
+                key={tab.id}
+                id={tab.id}
+                className="group relative flex items-center px-4 py-2 text-sm font-medium border-r border-base-300 bg-base-200 hover:bg-base-300 selected:bg-base-100 selected:text-primary cursor-pointer min-w-0"
+              >
+                <span className="flex items-center space-x-2 min-w-0">
+                  <span className="text-base">{tab.icon}</span>
+                  <span className="flex items-center">
+                    {tab.hasUnsavedChanges && <span className="text-error mr-1 font-bold">*</span>}
+                    <span className="truncate">{tab.title}</span>
+                  </span>
                 </span>
-              </span>
 
-              {/* 閉じるボタン */}
-              {tab.closable && (
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    await onCloseTab(tab.id);
-                  }}
-                  className="ml-2 p-1 rounded hover:bg-base-300 text-base-content hover:text-error transition-colors"
-                  aria-label={`${tab.title}を閉じる`}
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </Tab>
-          ))}
+                {/* 閉じるボタン */}
+                {tab.closable && (
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await onCloseTab(tab.id);
+                    }}
+                    className="ml-2 p-1 rounded hover:bg-base-300 text-base-content hover:text-error transition-colors"
+                    aria-label={`${tab.title}を閉じる`}
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </Tab>
+            );
+          })}
         </TabList>
       </Tabs>
 

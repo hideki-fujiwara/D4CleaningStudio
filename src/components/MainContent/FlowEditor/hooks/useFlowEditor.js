@@ -55,21 +55,17 @@ export const useFlowEditor = (
 
   const getInitialNodes = () => {
     if (initialMode === "loaded" && loadedData?.nodes) {
-      console.log("getInitialNodes (loaded):", loadedData.nodes.length, "nodes");
       return loadedData.nodes;
     }
     const nodes = initialMode === "empty" ? [] : initialNodes;
-    console.log("getInitialNodes:", nodes.length, "nodes");
     return nodes;
   };
 
   const getInitialEdges = () => {
     if (initialMode === "loaded" && loadedData?.edges) {
-      console.log("getInitialEdges (loaded):", loadedData.edges.length, "edges");
       return loadedData.edges;
     }
     const edges = initialMode === "empty" ? [] : initialEdges;
-    console.log("getInitialEdges:", edges.length, "edges");
     return edges;
   };
 
@@ -106,6 +102,34 @@ export const useFlowEditor = (
   const [nodeCounter, setNodeCounter] = useState(getInitialNodeCounter());
 
   // ========================================================================================
+  // タブ更新用のRef
+  // ========================================================================================
+
+  const onUpdateTabRef = useRef(onUpdateTab);
+  const tabIdRef = useRef(tabId);
+
+  // 最新の値を保持
+  useEffect(() => {
+    onUpdateTabRef.current = onUpdateTab;
+    tabIdRef.current = tabId;
+  });
+
+  // ========================================================================================
+  // タブ更新処理（履歴変更時）
+  // ========================================================================================
+
+  // 履歴変更時のコールバック（直接通知されたhistoryLengthを使用）
+  const handleHistoryChange = useCallback((historyInfo) => {
+    if (onUpdateTabRef.current && tabIdRef.current) {
+      const hasChanges = historyInfo.historyLength > 0;
+
+      onUpdateTabRef.current(tabIdRef.current, {
+        hasUnsavedChanges: hasChanges,
+      });
+    }
+  }, []);
+
+  // ========================================================================================
   // 履歴管理フック
   // ========================================================================================
 
@@ -115,14 +139,50 @@ export const useFlowEditor = (
     setNodes,
     setEdges,
     onHistoryChange: (historyInfo) => {
-      // 履歴変更をFlowEditorInnerに通知（useFileLoadフック分離後も継続）
-      console.log("履歴情報変更:", historyInfo);
-    }
+      // 履歴変更をタブ更新に通知
+      handleHistoryChange(historyInfo);
+    },
+    tabId: tabId,
+    fileName: fileName,
   });
+
+  // ========================================================================================
+  // 新しいタブ作成機能
+  // ========================================================================================
+
+  // 新しいタブで新規フロー作成
+  const newFlowInNewTab = useCallback(() => {
+    if (onCreateNewTab) {
+      // 新しいタブを作成
+      onCreateNewTab({
+        id: `flow-editor-${Date.now()}`,
+        title: "NewFile",
+        icon: "⧈",
+        component: "FlowEditor",
+        closable: true,
+        hasUnsavedChanges: false,
+        props: {
+          initialMode: "empty",
+        },
+      });
+
+      ConsoleMsg("info", "新しいタブで新規フローを作成しました");
+    } else {
+      ConsoleMsg("warn", "新しいタブ作成機能が利用できません");
+    }
+  }, [onCreateNewTab]);
 
   // ========================================================================================
   // ファイル保存フック
   // ========================================================================================
+
+  // 新規フロー作成時の処理（現在のタブをクリアするだけ、使用されない）
+  const handleNewFlow = useCallback(() => {
+    // ノードとエッジをクリア
+    setNodes([]);
+    setEdges([]);
+    setNodeCounter(1);
+  }, [setNodes, setEdges]);
 
   const fileSaveHook = useFileSave({
     exportFlowData: () => ({
@@ -137,8 +197,8 @@ export const useFlowEditor = (
     nodeCounter,
     initialFilePath: filePath,
     initialFileName: fileName,
-    onCreateNewTab,
-    onHistoryReset: historyHook.resetHistory
+    onHistoryReset: historyHook.resetHistory,
+    onNewFlow: handleNewFlow,
   });
 
   // ========================================================================================
@@ -158,7 +218,7 @@ export const useFlowEditor = (
     onHistoryReset: historyHook.resetHistory,
     onHistoryInitialize: historyHook.initializeHistory,
     onCreateNewTab,
-    hasUnsavedChanges: () => fileSaveHook.hasUnsavedChanges
+    hasUnsavedChanges: () => fileSaveHook.hasUnsavedChanges,
   });
 
   // ========================================================================================
@@ -167,7 +227,7 @@ export const useFlowEditor = (
 
   // ファイル読み込み完了後に履歴をクリア（一度だけ実行）
   const [isInitialized, setIsInitialized] = useState(false);
-  
+
   // デバッグ情報を確実に出力するuseEffect
   useEffect(() => {
     DebugConfig.logDebugInfo();
@@ -175,18 +235,17 @@ export const useFlowEditor = (
 
   useEffect(() => {
     if (initialMode === "loaded" && !isInitialized) {
-      console.log("ファイル読み込みモード - 履歴初期化開始");
       // 履歴をリセット
       historyHook.resetHistory();
       historyHook.setLoadingFlag(true);
-      
+
       setTimeout(() => {
         historyHook.setLoadingFlag(false);
         // 読み込み完了後、現在の状態を履歴の基準として初期化
         historyHook.initializeHistory(nodes, edges);
         ConsoleMsg("info", "ファイル読み込み完了：履歴を初期化しました");
       }, 200);
-      
+
       setIsInitialized(true);
     }
   }, [initialMode, isInitialized, nodes, edges]);
@@ -200,7 +259,7 @@ export const useFlowEditor = (
     (params) => {
       const newEdge = addEdge(params, edges);
       setEdges(newEdge);
-      
+
       // 履歴に保存
       setTimeout(() => {
         historyHookRef.current.saveToHistory(nodes, newEdge);
@@ -210,24 +269,16 @@ export const useFlowEditor = (
   );
 
   // ノード選択変更
-  const onSelectionChange = useCallback(
-    (selection) => {
-      console.log("選択変更:", selection);
-      // 選択変更では履歴に保存しない（パフォーマンス向上のため）
-    },
-    []
-  );
+  const onSelectionChange = useCallback((selection) => {
+    // 選択変更では履歴に保存しない（パフォーマンス向上のため）
+  }, []);
 
   // ノードドラッグ開始
-  const onNodeDragStart = useCallback((event, node) => {
-    console.log("ノードドラッグ開始:", node.id);
-  }, []);
+  const onNodeDragStart = useCallback((event, node) => {}, []);
 
   // ノードドラッグ終了
   const onNodeDragStop = useCallback(
     (event, node) => {
-      console.log("ノードドラッグ終了:", node.id);
-      
       // ドラッグ終了時に履歴に保存
       setTimeout(() => {
         historyHookRef.current.saveToHistory(nodes, edges);
@@ -303,19 +354,16 @@ export const useFlowEditor = (
 
   // リセット機能
   const onReset = useCallback(() => {
-    console.log("onReset が呼び出されました");
-    console.trace("onReset の呼び出し元を確認");
-    
     const resetNodes = initialMode === "empty" ? [] : initialNodes;
     const resetEdges = initialMode === "empty" ? [] : initialEdges;
-    
+
     setNodes(resetNodes);
     setEdges(resetEdges);
     setNodeCounter(1);
-    
+
     // 履歴をリセット
     historyHookRef.current.resetHistory();
-    
+
     ConsoleMsg("info", "フローを初期状態にリセットしました");
   }, [initialMode]);
 
@@ -324,10 +372,10 @@ export const useFlowEditor = (
     setNodes([]);
     setEdges([]);
     setNodeCounter(1);
-    
+
     // 履歴をリセット
     historyHookRef.current.resetHistory();
-    
+
     ConsoleMsg("info", "すべてのノードとエッジをクリアしました");
   }, []);
 
@@ -358,7 +406,7 @@ export const useFlowEditor = (
   const historyHookRef = useRef();
   const fileSaveHookRef = useRef();
   const fileLoadHookRef = useRef();
-  
+
   // Refを更新
   historyHookRef.current = historyHook;
   fileSaveHookRef.current = fileSaveHook;
@@ -368,28 +416,19 @@ export const useFlowEditor = (
     const handleKeyDown = (event) => {
       // デバッグ用：キー情報をログ出力
       if (event.ctrlKey && (event.key === "r" || event.key === "R")) {
-        console.log("キー情報:", {
-          key: event.key,
-          code: event.code,
-          ctrlKey: event.ctrlKey,
-          shiftKey: event.shiftKey,
-          altKey: event.altKey,
-          metaKey: event.metaKey
-        });
+        // キー情報（デバッグ時のみ有効）
       }
 
       // Ctrl+Z（取り消し）
       if (event.ctrlKey && (event.key === "z" || event.key === "Z") && !event.shiftKey) {
         event.preventDefault();
-        console.log(`Undo実行: Ctrl+${event.key}`);
         historyHookRef.current.undo();
       }
 
       // Ctrl+Y または Ctrl+Shift+Z（やり直し）- 一般的な2つのパターンに対応
-      if (event.ctrlKey && ((event.key === "y" || event.key === "Y") || ((event.key === "z" || event.key === "Z") && event.shiftKey))) {
+      if (event.ctrlKey && (event.key === "y" || event.key === "Y" || ((event.key === "z" || event.key === "Z") && event.shiftKey))) {
         event.preventDefault();
         const keyCombo = event.shiftKey ? `Shift+${event.key}` : event.key;
-        console.log(`Redo実行: Ctrl+${keyCombo}`);
         historyHookRef.current.redo();
       }
 
@@ -414,14 +453,13 @@ export const useFlowEditor = (
       // Ctrl+N（新規ファイル）
       if (event.ctrlKey && event.key === "n") {
         event.preventDefault();
-        fileSaveHookRef.current.newFlow();
+        newFlowInNewTab();
       }
 
       // Ctrl+R（リセット）- ブラウザのリロードを防ぐ
       if (event.ctrlKey && (event.key === "r" || event.key === "R")) {
         event.preventDefault();
         event.stopPropagation(); // イベントの伝播も停止
-        console.log(`FlowEditor: Ctrl+${event.key} キーボードショートカットでリセット実行`);
         ConsoleMsg("info", `Ctrl+${event.key}: フローをリセットします`);
         onReset();
       }
@@ -430,16 +468,12 @@ export const useFlowEditor = (
       if (event.key === "F5") {
         const isDebugMode = DebugConfig.isDebugMode;
         const allowReload = DebugConfig.allowF5Reload;
-        
-        console.log(`🔄 F5キー押下 - デバッグモード: ${isDebugMode}, リロード許可: ${allowReload}`);
-        
+
         if (!allowReload) {
           event.preventDefault();
           event.stopPropagation();
-          console.log("❌ F5 リロードを防止（本番モード）");
           ConsoleMsg("info", "F5 リロードを防止（本番モード）");
         } else {
-          console.log("✅ F5 リロードを許可（デバッグモード）");
           ConsoleMsg("info", "F5 リロードを許可（デバッグモード）");
         }
       }
@@ -459,15 +493,19 @@ export const useFlowEditor = (
   useEffect(() => {
     if (onUpdateTab && tabId) {
       const debounceTimer = setTimeout(() => {
+        // 履歴の変更を未保存状態として扱う
+        const hasHistoryChanges = historyHook.currentHistoryIndex > 0 || historyHook.historyLength > 0;
+        const hasUnsavedChanges = fileSaveHook.hasUnsavedChanges || hasHistoryChanges;
+
         onUpdateTab(tabId, {
-          hasUnsavedChanges: fileSaveHook.hasUnsavedChanges,
+          hasUnsavedChanges,
           title: fileSaveHook.fileName,
         });
-      }, 500);
+      }, 100);
 
       return () => clearTimeout(debounceTimer);
     }
-  }, [fileSaveHook.hasUnsavedChanges, fileSaveHook.fileName, onUpdateTab, tabId]);
+  }, [fileSaveHook.hasUnsavedChanges, fileSaveHook.fileName, historyHook.currentHistoryIndex, historyHook.historyLength, onUpdateTab, tabId]);
 
   // ========================================================================================
   // 返り値
@@ -505,7 +543,7 @@ export const useFlowEditor = (
     // ファイル保存
     saveFlow: fileSaveHook.saveFlow,
     saveAsFlow: fileSaveHook.saveAsFlow,
-    newFlow: fileSaveHook.newFlow,
+    newFlow: newFlowInNewTab,
     currentFilePath: fileSaveHook.currentFilePath,
     fileName: fileSaveHook.fileName,
     hasUnsavedChanges: fileSaveHook.hasUnsavedChanges,

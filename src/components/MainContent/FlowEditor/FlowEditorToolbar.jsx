@@ -169,18 +169,19 @@ const DraggableNodeItem = ({ nodeType, tooltip, children, className = BUTTON_STY
 
 /**
  * ファイル操作グループ
- * 新規作成、ファイルを開く、保存、別名で保存の機能を提供
+ * 新規作成、新しいタブで作成、ファイルを開く、保存、別名で保存の機能を提供
  *
  * @param {Object} props - プロパティ
  * @param {Function} props.saveFlow - 保存機能
  * @param {Function} props.saveAsFlow - 名前をつけて保存機能
- * @param {Function} props.newFlow - 新規ファイル作成機能
+ * @param {Function} props.newFlow - 新規ファイル作成機能（現在のタブ）
+ * @param {Function} props.newFlowInNewTab - 新しいタブで新規ファイル作成機能
  * @param {Function} props.openFlow - ファイルを開く機能
  * @param {boolean} props.hasUnsavedChanges - 未保存の変更があるかどうか
  */
 const FileOperationsGroup = ({ saveFlow, saveAsFlow, newFlow, openFlow, hasUnsavedChanges }) => (
   <Group className="flex items-center gap-1">
-    <TooltipButton tooltip="新規 (Ctrl+N)" onPress={newFlow}>
+    <TooltipButton tooltip="新規タブで作成 (Ctrl+N)" onPress={newFlow}>
       <NewFileIcon className={BUTTON_STYLES.iconSize} />
     </TooltipButton>
 
@@ -376,7 +377,6 @@ const FlowOperationsGroup = ({ onReset, onClearAll }) => (
     <TooltipButton
       tooltip="フローを初期状態にリセット"
       onPress={() => {
-        console.log("ツールバー: リセットボタンがクリックされました");
         onReset();
       }}
     >
@@ -411,65 +411,65 @@ const FlowOperationsGroup = ({ onReset, onClearAll }) => (
  * @param {number} props.currentHistoryIndex - 現在の履歴インデックス
  */
 const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste, historyLength, currentHistoryIndex }) => {
-  console.log("StatisticsDisplay - 履歴情報:", { historyLength, currentHistoryIndex });
-  
   return (
-  <TooltipTrigger delay={TOOLTIP_CONFIG.delay} closeDelay={TOOLTIP_CONFIG.closeDelay}>
-    <div className="text-sm text-base-content/70 px-3 py-2 bg-base-100 rounded border border-base-300 cursor-help flex items-center gap-3">
-      <span className="font-mono">ノード: {nodeCount}</span>
-      <span className="text-base-300">|</span>
-      <span className="font-mono">エッジ: {edgeCount}</span>
-      <span className="text-base-300">|</span>
-      <span className="font-mono">倍率: {Math.round(zoom * 100)}%</span>
-      <span className="text-base-300">|</span>
-      <span className="font-mono">
-        履歴: {historyLength > 0 ? `${currentHistoryIndex}/${historyLength}` : '0'}
-      </span>
-      {copyPaste && (
-        <>
-          <span className="text-base-300">|</span>
-          <span className="font-mono">選択: {copyPaste.selectedCount}</span>
-          {copyPaste.hasClipboard && (
-            <>
-              <span className="text-base-300">|</span>
-              <span className="font-mono text-blue-600">📋 {copyPaste.clipboardCount}</span>
-            </>
-          )}
-        </>
-      )}
-    </div>
-    <Tooltip className={TOOLTIP_STYLES.base} offset={TOOLTIP_CONFIG.offset}>
-      <div className="text-center">
-        <div className="font-semibold mb-2">フロー統計情報</div>
-        <div className="text-xs space-y-1">
-          <div>📦 総ノード数: {nodeCount}</div>
-          <div>🔗 総エッジ数: {edgeCount}</div>
-          <div>🔍 表示倍率: {Math.round(zoom * 100)}%</div>
-          {copyPaste && (
-            <>
-              <div className="border-t border-base-content/20 pt-1 mt-2">
-                <div>✅ 選択ノード: {copyPaste.selectedCount}</div>
-                <div>📋 クリップボード: {copyPaste.clipboardCount}</div>
-                {copyPaste.hasSelection && <div className="text-green-400">Ctrl+C でコピー可能</div>}
-                {copyPaste.hasClipboard && <div className="text-blue-400">Ctrl+V でペースト可能</div>}
-                {copyPaste.hasSelection && <div className="text-red-400">Delete で削除可能</div>}
-              </div>
-            </>
-          )}
-          <div className="border-t border-base-content/20 pt-1 mt-2">
-            <div>ズーム: {zoom.toFixed(2)}x</div>
-            <div>📚 履歴: {historyLength}件</div>
-            {historyLength > 0 && <div>📍 現在位置: {currentHistoryIndex}/{historyLength}</div>}
+    <TooltipTrigger delay={TOOLTIP_CONFIG.delay} closeDelay={TOOLTIP_CONFIG.closeDelay}>
+      <div className="text-sm text-base-content/70 px-3 py-2 bg-base-100 rounded border border-base-300 cursor-help flex items-center gap-3">
+        <span className="font-mono">ノード: {nodeCount}</span>
+        <span className="text-base-300">|</span>
+        <span className="font-mono">エッジ: {edgeCount}</span>
+        <span className="text-base-300">|</span>
+        <span className="font-mono">倍率: {Math.round(zoom * 100)}%</span>
+        <span className="text-base-300">|</span>
+        <span className="font-mono">履歴: {historyLength > 0 ? `${currentHistoryIndex}/${historyLength}` : "0"}</span>
+        {copyPaste && (
+          <>
+            <span className="text-base-300">|</span>
+            <span className="font-mono">選択: {copyPaste.selectedCount}</span>
+            {copyPaste.hasClipboard && (
+              <>
+                <span className="text-base-300">|</span>
+                <span className="font-mono text-blue-600">📋 {copyPaste.clipboardCount}</span>
+              </>
+            )}
+          </>
+        )}
+      </div>
+      <Tooltip className={TOOLTIP_STYLES.base} offset={TOOLTIP_CONFIG.offset}>
+        <div className="text-center">
+          <div className="font-semibold mb-2">フロー統計情報</div>
+          <div className="text-xs space-y-1">
+            <div>📦 総ノード数: {nodeCount}</div>
+            <div>🔗 総エッジ数: {edgeCount}</div>
+            <div>🔍 表示倍率: {Math.round(zoom * 100)}%</div>
+            {copyPaste && (
+              <>
+                <div className="border-t border-base-content/20 pt-1 mt-2">
+                  <div>✅ 選択ノード: {copyPaste.selectedCount}</div>
+                  <div>📋 クリップボード: {copyPaste.clipboardCount}</div>
+                  {copyPaste.hasSelection && <div className="text-green-400">Ctrl+C でコピー可能</div>}
+                  {copyPaste.hasClipboard && <div className="text-blue-400">Ctrl+V でペースト可能</div>}
+                  {copyPaste.hasSelection && <div className="text-red-400">Delete で削除可能</div>}
+                </div>
+              </>
+            )}
+            <div className="border-t border-base-content/20 pt-1 mt-2">
+              <div>ズーム: {zoom.toFixed(2)}x</div>
+              <div>📚 履歴: {historyLength}件</div>
+              {historyLength > 0 && (
+                <div>
+                  📍 現在位置: {currentHistoryIndex}/{historyLength}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-      <OverlayArrow>
-        <svg width={6} height={6} viewBox="0 0 6 6" className="fill-base-content">
-          <path d="m0 0 3 3 3-3Z" />
-        </svg>
-      </OverlayArrow>
-    </Tooltip>
-  </TooltipTrigger>
+        <OverlayArrow>
+          <svg width={6} height={6} viewBox="0 0 6 6" className="fill-base-content">
+            <path d="m0 0 3 3 3-3Z" />
+          </svg>
+        </OverlayArrow>
+      </Tooltip>
+    </TooltipTrigger>
   );
 };
 
@@ -500,6 +500,7 @@ const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste, historyLengt
  * @param {function} props.saveFlow - 保存機能
  * @param {function} props.saveAsFlow - 名前をつけて保存機能
  * @param {function} props.newFlow - 新規ファイル作成機能
+ * @param {function} props.newFlowInNewTab - 新しいタブで新規ファイル作成機能
  * @param {function} props.openFlow - ファイルを開く機能
  * @param {boolean} props.hasUnsavedChanges - 未保存の変更があるかどうか
  */
@@ -530,8 +531,6 @@ const FlowEditorToolbar = ({
   openFlow,
   hasUnsavedChanges = false,
 }) => {
-  console.log("FlowEditorToolbar - 履歴情報:", { historyLength, currentHistoryIndex });
-  
   return (
     <div className="bg-base-200">
       <AriaToolbar className="flex items-center px-1 py-1 gap-0">

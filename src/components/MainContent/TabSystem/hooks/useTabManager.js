@@ -106,10 +106,8 @@ export function useTabManager(initialTabs = []) {
    */
   const updateTab = (tabId, updates) => {
     setOpenTabs((prev) => prev.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab)));
-    // ログレベルを下げる
-    if (updates.hasUnsavedChanges !== undefined) {
-      console.log(`タブの未保存状態更新: ${tabId} -> ${updates.hasUnsavedChanges}`);
-    } else {
+    // ログレベルを下げる（hasUnsavedChanges更新時はログを出力しない）
+    if (updates.hasUnsavedChanges === undefined) {
       ConsoleMsg("info", `タブを更新しました: ${tabId}`, updates);
     }
   };

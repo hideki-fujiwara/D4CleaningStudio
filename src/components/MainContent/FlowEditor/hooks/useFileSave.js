@@ -25,11 +25,11 @@ import ConsoleMsg from "../../../../utils/ConsoleMsg";
  * @param {number} params.nodeCounter - 現在のノードカウンター
  * @param {string} params.initialFilePath - 初期ファイルパス
  * @param {string} params.initialFileName - 初期ファイル名
- * @param {Function} params.onCreateNewTab - 新規タブ作成コールバック
  * @param {Function} params.onHistoryReset - 履歴リセットコールバック
+ * @param {Function} params.onNewFlow - 新規フロー作成コールバック
  * @returns {Object} ファイル保存機能
  */
-export const useFileSave = ({ exportFlowData, getNodes, getEdges, nodeCounter, initialFilePath, initialFileName, onCreateNewTab, onHistoryReset }) => {
+export const useFileSave = ({ exportFlowData, getNodes, getEdges, nodeCounter, initialFilePath, initialFileName, onHistoryReset, onNewFlow }) => {
   // ========================================================================================
   // 状態管理
   // ========================================================================================
@@ -214,23 +214,6 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, nodeCounter, i
           nodeCounter: nodeCounter,
         });
 
-        // 新しいタブを作成してそちらに遷移
-        if (onCreateNewTab) {
-          onCreateNewTab({
-            title: fileNameOnly,
-            icon: "📄",
-            component: "FlowEditor",
-            closable: true,
-            hasUnsavedChanges: false,
-            props: {
-              initialMode: "loaded",
-              loadedData: flowData,
-              filePath: filePath,
-              fileName: fileNameOnly,
-            },
-          });
-        }
-
         ConsoleMsg("success", `ファイルを保存しました: ${fileNameOnly}`);
       }
     } catch (error) {
@@ -240,7 +223,7 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, nodeCounter, i
       // 保存処理完了後にフラグをリセット
       isSaving.current = false;
     }
-  }, [exportFlowData, displayFileName, getDefaultSavePath, onHistoryReset, onCreateNewTab, getNodes, getEdges, nodeCounter]);
+  }, [exportFlowData, displayFileName, getDefaultSavePath, onHistoryReset, getNodes, getEdges, nodeCounter]);
 
   /**
    * 新規ファイル作成機能（Ctrl+N）
@@ -251,22 +234,27 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, nodeCounter, i
       if (!result) return;
     }
 
-    if (onCreateNewTab) {
-      // 新しいタブを作成
-      onCreateNewTab({
-        title: "NewFile",
-        icon: "📄",
-        component: "FlowEditor",
-        closable: true,
-        hasUnsavedChanges: false,
-        props: {
-          initialMode: "empty",
-        },
-      });
+    // 現在のタブで新規フローを開始する場合の処理
+    // ファイル状態をリセット
+    setCurrentFilePath(null);
+    setDisplayFileName("NewFile");
+    setHasUnsavedChanges(false);
+    setLastSavedState(null);
+
+    // 履歴をリセット
+    if (onHistoryReset) {
+      onHistoryReset();
+    }
+
+    // フローデータをリセット（ノード・エッジクリア）
+    if (onNewFlow) {
+      onNewFlow();
     }
 
     ConsoleMsg("info", "新規フローを作成しました");
-  }, [hasUnsavedChanges, onCreateNewTab]);
+  }, [hasUnsavedChanges, onHistoryReset, onNewFlow]);
+
+
 
   // ========================================================================================
   // タブクローズ確認

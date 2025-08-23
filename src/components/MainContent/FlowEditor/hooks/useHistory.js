@@ -2,8 +2,10 @@
  * ================================================================
  * 履歴管理機能カスタムフック
  * ================================================================
- *
- * FlowEditorの履歴管理機能を分離したカスタムフック
+ *  const undo = useCallback(() => {
+
+    if (currentHistoryIndex > 0) {
+      const prevIndex = currentHistoryIndex - 1;Editorの履歴管理機能を分離したカスタムフック
  * Undo/Redo機能と履歴スタック管理を提供
  *
  * @author D4CleaningStudio
@@ -22,9 +24,11 @@ import ConsoleMsg from "../../../../utils/ConsoleMsg";
  * @param {Function} params.setNodes - ノード設定関数
  * @param {Function} params.setEdges - エッジ設定関数
  * @param {Function} params.onHistoryChange - 履歴変更通知コールバック
+ * @param {string} params.tabId - タブID（デバッグ用）
+ * @param {string} params.fileName - ファイル名（デバッグ用）
  * @returns {Object} 履歴管理機能
  */
-export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryChange }) => {
+export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryChange, tabId, fileName }) => {
   // ========================================================================================
   // 状態管理
   // ========================================================================================
@@ -64,14 +68,19 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
       };
 
       setHistory((prev) => {
-        // 基準状態がある場合（履歴配列に1つエントリがあるがcurrentHistoryIndex=0の場合）
+        // 基準状態がある場合の判定を修正
+        // 1. ファイル読み込み後: prev.length === 1 && currentHistoryIndex === 0
+        // 2. 新規プロジェクト: prev.length === 0 && currentHistoryIndex === 0
         let baselineState = null;
         let actualHistory = prev;
 
-        if (prev.length === 1 && currentHistoryIndex === 0) {
-          // 基準状態を保持
-          baselineState = prev[0];
-          actualHistory = [];
+        if ((prev.length === 1 && currentHistoryIndex === 0) || (prev.length === 0 && currentHistoryIndex === 0)) {
+          if (prev.length === 1) {
+            // ファイル読み込み後の基準状態
+            baselineState = prev[0];
+            actualHistory = [];
+          }
+          // 新規プロジェクトの場合は基準状態なし
         }
 
         // 最新の履歴と比較して変化がない場合は保存しない
@@ -125,20 +134,22 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
         }
 
         const displayHistoryLength = baselineState ? actualHistoryLength : newHistory.length;
-        console.log(`履歴保存: 表示履歴長=${displayHistoryLength}, 実際配列長=${newHistory.length}, currentIndex=${baselineState ? actualHistoryLength + 1 : newHistory.length}`);
-        ConsoleMsg("info", `履歴を保存しました (${displayHistoryLength}/${maxHistorySize})`);
+
+        // タブ情報を含む履歴保存メッセージ
+        const tabInfo = tabId ? `[Tab: ${fileName || tabId}] ` : '';
+        ConsoleMsg("info", `${tabInfo}履歴を保存しました (${displayHistoryLength}/${maxHistorySize})`);
 
         // 履歴変更を通知
         if (onHistoryChange) {
-          onHistoryChange({
+          const notificationData = {
             historyLength: displayHistoryLength,
             currentHistoryIndex: displayHistoryLength, // 表示用は実際の操作履歴件数
             canUndo: displayHistoryLength > 0,
             canRedo: false,
-          });
-        }
-
-        return newHistory;
+          };
+          
+          onHistoryChange(notificationData);
+        }        return newHistory;
       });
     },
     [currentHistoryIndex, maxHistorySize, onHistoryChange]
@@ -157,7 +168,11 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
    * - 2: 2番目の操作（表示上は履歴件数2、履歴位置2）
    */
   const undo = useCallback(() => {
-    console.log(`Undo開始: currentIndex=${currentHistoryIndex}, historyLength=${history.length}`);
+    console.log("🔄 UNDO開始:", {
+      currentHistoryIndex,
+      historyLength: history.length,
+      history: history.map((h, i) => ({ index: i, nodesCount: h.nodes.length, edgesCount: h.edges.length })),
+    });
 
     if (currentHistoryIndex > 0) {
       const prevIndex = currentHistoryIndex - 1;
@@ -165,14 +180,16 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
       // 履歴復元中フラグを立てる
       isRestoringHistory.current = true;
 
+      // 基準状態の定義
+      const baselineState = history.length > 0 ? history[0] : null;
+
       if (prevIndex === 0) {
         // 基準状態に戻る（履歴配列の最初の要素）
         if (history.length > 0) {
-          const baselineState = history[0];
-          console.log("基準状態に戻る:", { nodes: baselineState.nodes.length, edges: baselineState.edges.length });
+          const baselineStateData = history[0];
 
-          setNodes(baselineState.nodes);
-          setEdges(baselineState.edges);
+          setNodes(baselineStateData.nodes);
+          setEdges(baselineStateData.edges);
           setCurrentHistoryIndex(0);
 
           // 履歴変更を通知（履歴件数0として表示）
@@ -197,28 +214,30 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
           // 基準状態がある場合: prevIndex=1なら基準状態、prevIndex>1なら実際の履歴
           if (prevIndex === 1) {
             prevState = history[0]; // 基準状態
-            console.log("基準状態へ戻る（prevIndex=1）");
           } else {
             prevState = history[prevIndex - 1];
-            console.log(`履歴復元: history[${prevIndex - 1}]`);
           }
         } else {
           // 基準状態がない場合: 通常の履歴アクセス
           prevState = history[prevIndex - 1];
-          console.log(`通常履歴復元: history[${prevIndex - 1}]`);
         }
-
-        console.log("復元する状態:", { nodes: prevState.nodes.length, edges: prevState.edges.length });
 
         setNodes(prevState.nodes);
         setEdges(prevState.edges);
         setCurrentHistoryIndex(prevIndex);
 
         // 表示用履歴件数調整
-        const displayHistoryLength = hasBaseline ? history.length - 1 : history.length;
-        const displayCurrentIndex = hasBaseline ? prevIndex - 1 : prevIndex;
+        let displayHistoryLength, displayCurrentIndex;
 
-        console.log(`Undo結果: 表示履歴長=${displayHistoryLength}, 表示位置=${displayCurrentIndex}, 実際位置=${prevIndex}`);
+        if (prevIndex === 0) {
+          // 基準状態に戻った場合は履歴長を0とする
+          displayHistoryLength = 0;
+          displayCurrentIndex = 0;
+        } else {
+          const hasBaseline = baselineState !== null;
+          displayHistoryLength = hasBaseline ? history.length - 1 : history.length;
+          displayCurrentIndex = hasBaseline ? prevIndex - 1 : prevIndex;
+        }
 
         // 履歴変更を通知
         if (onHistoryChange) {
@@ -230,7 +249,8 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
           });
         }
 
-        ConsoleMsg("info", `操作を取り消しました (位置: ${displayCurrentIndex}/${displayHistoryLength})`);
+        const tabInfo = tabId ? `[Tab: ${fileName || tabId}] ` : '';
+        ConsoleMsg("info", `${tabInfo}操作を取り消しました (位置: ${displayCurrentIndex}/${displayHistoryLength})`);
       }
 
       // フラグを戻す
@@ -255,13 +275,14 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
    * - 2: 2番目の操作（表示上は履歴件数2）
    */
   const redo = useCallback(() => {
-    console.log(`Redo開始: currentIndex=${currentHistoryIndex}, historyLength=${history.length}`);
-
     if (currentHistoryIndex < history.length) {
       const nextIndex = currentHistoryIndex + 1;
 
       // 履歴復元中フラグを立てる
       isRestoringHistory.current = true;
+
+      // 基準状態の定義
+      const baselineState = history.length > 0 ? history[0] : null;
 
       // 基準状態がある場合の特別処理
       const hasBaseline = history.length > 1 && currentHistoryIndex === 0;
@@ -270,14 +291,10 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
       if (hasBaseline && nextIndex === 1) {
         // 基準状態(index=0)から最初の操作履歴(index=1)への復帰
         nextState = history[1]; // 2番目の要素が最初の操作履歴
-        console.log("基準状態から最初の操作履歴へ復帰");
       } else {
         // 通常の履歴復元
         nextState = history[nextIndex - 1];
-        console.log(`通常の履歴復元: history[${nextIndex - 1}]`);
       }
-
-      console.log("復元する状態:", { nodes: nextState.nodes.length, edges: nextState.edges.length });
 
       setNodes(nextState.nodes);
       setEdges(nextState.edges);
@@ -289,10 +306,17 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
       }, 100);
 
       // 表示用履歴件数調整
-      const displayHistoryLength = hasBaseline ? history.length - 1 : history.length;
-      const displayCurrentIndex = hasBaseline ? nextIndex - 1 : nextIndex;
+      let displayHistoryLength, displayCurrentIndex;
 
-      console.log(`Redo結果: 表示履歴長=${displayHistoryLength}, 表示位置=${displayCurrentIndex}, 実際位置=${nextIndex}`);
+      if (nextIndex === 0) {
+        // 基準状態の場合は履歴長を0とする
+        displayHistoryLength = 0;
+        displayCurrentIndex = 0;
+      } else {
+        const hasBaseline = baselineState !== null;
+        displayHistoryLength = hasBaseline ? history.length - 1 : history.length;
+        displayCurrentIndex = hasBaseline ? nextIndex - 1 : nextIndex;
+      }
 
       // 履歴変更を通知
       if (onHistoryChange) {
@@ -304,7 +328,8 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
         });
       }
 
-      ConsoleMsg("info", `操作をやり直しました (位置: ${displayCurrentIndex}/${displayHistoryLength})`);
+      const tabInfo = tabId ? `[Tab: ${fileName || tabId}] ` : '';
+      ConsoleMsg("info", `${tabInfo}操作をやり直しました (位置: ${displayCurrentIndex}/${displayHistoryLength})`);
     } else {
       ConsoleMsg("warning", "これ以上やり直しできません");
     }
@@ -314,7 +339,6 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
    * 履歴をリセット
    */
   const resetHistory = useCallback(() => {
-    console.log("履歴リセット実行");
     setHistory([]);
     setCurrentHistoryIndex(0);
 
@@ -328,7 +352,8 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
       });
     }
 
-    ConsoleMsg("info", "履歴をリセットしました");
+    const tabInfo = tabId ? `[Tab: ${fileName || tabId}] ` : '';
+    ConsoleMsg("info", `${tabInfo}履歴をリセットしました`);
   }, [onHistoryChange]);
 
   /**
@@ -337,8 +362,6 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
    */
   const initializeHistory = useCallback(
     (nodes, edges) => {
-      console.log("履歴初期化実行 - 現在の状態を基準状態として設定（履歴件数は0のまま）");
-
       const initialState = {
         nodes: JSON.parse(JSON.stringify(nodes)),
         edges: JSON.parse(JSON.stringify(edges)),
@@ -359,7 +382,8 @@ export const useHistory = ({ getNodes, getEdges, setNodes, setEdges, onHistoryCh
         });
       }
 
-      ConsoleMsg("info", "履歴を初期化しました（基準状態設定、履歴件数: 0）");
+      const tabInfo = tabId ? `[Tab: ${fileName || tabId}] ` : '';
+      ConsoleMsg("info", `${tabInfo}履歴を初期化しました（基準状態設定、履歴件数: 0）`);
     },
     [onHistoryChange]
   );

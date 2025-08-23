@@ -7,11 +7,6 @@ class DebugConfig {
     const processEnv = typeof process !== "undefined" && process.env && process.env.REACT_APP_DEBUG_MODE;
     const isDebug = viteEnv === "true" || processEnv === "true";
 
-    console.log("🔧 Debug Config Check:");
-    console.log("  - import.meta.env.REACT_APP_DEBUG_MODE:", viteEnv);
-    console.log("  - process.env.REACT_APP_DEBUG_MODE:", processEnv);
-    console.log("  - Final isDebugMode:", isDebug);
-
     return isDebug;
   }
 
@@ -21,8 +16,11 @@ class DebugConfig {
   }
 
   static logDebugInfo() {
-    console.log("🔧 Debug Mode:", this.isDebugMode ? "ON" : "OFF");
-    console.log("🔄 F5 Reload:", this.allowF5Reload ? "ENABLED" : "DISABLED");
+    // 必要に応じてデバッグ情報を出力
+    if (this.isDebugMode) {
+      console.log("🔧 Debug Mode: ON");
+      console.log("🔄 F5 Reload: ENABLED");
+    }
   }
 }
 

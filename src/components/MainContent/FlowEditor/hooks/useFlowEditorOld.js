@@ -114,7 +114,7 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
       console.log("ファイル読み込みモード - 履歴リセット開始");
       // ファイル読み込み中フラグを設定
       isLoading.current = true;
-      
+
       // ファイル読み込み時は履歴をクリアして新しいスタートにする
       setTimeout(() => {
         console.log("履歴リセット実行 - ファイル読み込み時");
@@ -122,7 +122,7 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
         setCurrentHistoryIndex(0);
         setHasUnsavedChanges(false);
         console.log("履歴リセット完了: 履歴=[], インデックス=0");
-        
+
         // 少し待ってから読み込み中フラグを解除
         setTimeout(() => {
           isLoading.current = false;
@@ -145,7 +145,7 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
     onHistoryChange: (historyInfo) => {
       // 履歴変更をFlowEditorInnerに通知
       console.log("履歴情報変更:", historyInfo);
-    }
+    },
   });
 
   // ファイル保存フック
@@ -166,7 +166,7 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
     initialFilePath: filePath,
     initialFileName: fileName,
     onCreateNewTab,
-    onHistoryReset: historyHook.resetHistory
+    onHistoryReset: historyHook.resetHistory,
   });
 
   // ========================================================================================
@@ -229,12 +229,12 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
         }
 
         ConsoleMsg("info", `履歴を保存しました (${newHistory.length}/${maxHistorySize})`);
-        
+
         // 操作が記録されたので未保存状態に設定（履歴が1つだけの場合は未保存状態にしない）
         if (newHistory.length > 1) {
           setHasUnsavedChanges(true);
         }
-        
+
         return newHistory;
       });
     },
@@ -452,7 +452,7 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
         setNodes(prevState.nodes);
         setEdges(prevState.edges);
       }
-      
+
       setCurrentHistoryIndex(prevIndex);
 
       // フラグを戻す
@@ -587,11 +587,7 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
 
     // 変更がある場合は確認ダイアログを表示
     const result = confirm(
-      `"${displayFileName}" に未保存の変更があります。\n\n` +
-      `保存しますか？\n\n` +
-      `「OK」: 保存してタブを閉じる\n` +
-      `「キャンセル」: 保存せずにタブを閉じる\n` +
-      `「×」: タブを閉じない`
+      `"${displayFileName}" に未保存の変更があります。\n\n` + `保存しますか？\n\n` + `「OK」: 保存してタブを閉じる\n` + `「キャンセル」: 保存せずにタブを閉じる\n` + `「×」: タブを閉じない`
     );
 
     if (result === true) {
@@ -642,7 +638,7 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
         setLastSavedState({
           nodes: JSON.stringify(getNodes()),
           edges: JSON.stringify(getEdges()),
-          nodeCounter: nodeCounter
+          nodeCounter: nodeCounter,
         });
 
         // 履歴をクリア
@@ -705,7 +701,7 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
         setLastSavedState({
           nodes: JSON.stringify(getNodes()),
           edges: JSON.stringify(getEdges()),
-          nodeCounter: nodeCounter
+          nodeCounter: nodeCounter,
         });
 
         ConsoleMsg("success", `ファイルを保存しました: ${fileName}`);
@@ -743,9 +739,9 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
 
           // タブ名も更新
           if (onUpdateTab && tabId) {
-            onUpdateTab(tabId, { 
+            onUpdateTab(tabId, {
               title: fileNameOnly,
-              hasUnsavedChanges: false 
+              hasUnsavedChanges: false,
             });
           }
 
@@ -757,7 +753,7 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
           setLastSavedState({
             nodes: JSON.stringify(getNodes()),
             edges: JSON.stringify(getEdges()),
-            nodeCounter: nodeCounter
+            nodeCounter: nodeCounter,
           });
 
           ConsoleMsg("success", `ファイルを保存しました: ${fileNameOnly}`);
@@ -822,12 +818,13 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
         setLastSavedState({
           nodes: JSON.stringify(getNodes()),
           edges: JSON.stringify(getEdges()),
-          nodeCounter: nodeCounter
+          nodeCounter: nodeCounter,
         });
 
         // 新しいタブを作成してそちらに遷移
         if (onCreateNewTab) {
           onCreateNewTab({
+            id: `flow-editor-${Date.now()}`,
             title: fileNameOnly,
             icon: "📄",
             component: "FlowEditor",
@@ -837,7 +834,7 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
               initialMode: "loaded",
               loadedData: flowData,
               filePath: filePath,
-              fileName: fileNameOnly
+              fileName: fileNameOnly,
             },
           });
         }
@@ -923,6 +920,7 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
     // 新しいタブを作成
     if (onCreateNewTab) {
       onCreateNewTab({
+        id: `flow-editor-${Date.now()}`,
         title: "NewFile",
         icon: "⧈",
         component: "FlowEditor",
@@ -930,8 +928,8 @@ export const useFlowEditor = (initialMode = "default", loadedData = null, filePa
         hasUnsavedChanges: false,
         props: {
           initialMode: "empty",
-          fileName: "NewFile"
-        }
+          fileName: "NewFile",
+        },
       });
       ConsoleMsg("info", "新しいタブで新規フローを作成しました");
     } else {
