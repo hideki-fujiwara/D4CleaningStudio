@@ -93,6 +93,21 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
     requestTabClose,
   } = useFlowEditor(initialMode, loadedData, filePath, fileName, tabId, onCreateNewTab, onUpdateTab, onRequestTabClose);
 
+  // 初期フォーカス設定
+  React.useEffect(() => {
+    const focusContainer = () => {
+      if (reactFlowWrapper.current) {
+        reactFlowWrapper.current.focus();
+        console.log("[FlowEditorContent] Focus set to container");
+      }
+    };
+
+    // 少し遅延してフォーカス設定（ReactFlowの初期化後）
+    const timer = setTimeout(focusContainer, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   // 履歴情報が変更されたときに親に通知
   React.useEffect(() => {
     if (onHistoryChange) {
@@ -111,75 +126,26 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
   // ズーム状態管理
   const [zoom, setZoom] = useState(1);
   const [isZoomDisabled, setIsZoomDisabled] = useState(false);
-  const [selectedNodes, setSelectedNodes] = useState([]);
 
-  // ノード選択変更時のコールバック
+  // ノード選択変更時のコールバック（ReactFlowの標準動作を活用）
   const handleSelectionChange = useCallback(
     (params) => {
-      setSelectedNodes(params.nodes);
-      onSelectionChange(params);
+      if (onSelectionChange) {
+        onSelectionChange(params);
+      }
     },
     [onSelectionChange]
   );
 
-  // ドラッグ開始時のコールバック（必ず選択状態にする）
+  // ドラッグ開始時のコールバック（ReactFlowの標準動作を活用）
   const handleNodeDragStart = useCallback(
     (event, node) => {
-      // ドラッグ開始時に必ずそのノードを選択状態にする
-      const nodeElement = nodes.find((n) => n.id === node.id);
-      if (nodeElement && !nodeElement.selected) {
-        // ReactFlowの状態を更新して選択状態にする
-        const updatedNodes = nodes.map((n) => ({
-          ...n,
-          selected: n.id === node.id,
-        }));
-        // onNodesChangeを呼び出してReactFlowの状態を更新
-        onNodesChange([
-          {
-            type: "select",
-            id: node.id,
-            selected: true,
-          },
-          ...nodes
-            .filter((n) => n.id !== node.id && n.selected)
-            .map((n) => ({
-              type: "select",
-              id: n.id,
-              selected: false,
-            })),
-        ]);
-        setSelectedNodes([{ ...nodeElement, selected: true }]);
-      }
-      onNodeDragStart(event, node);
-    },
-    [nodes, onNodeDragStart, onNodesChange]
-  );
-
-  // ノードクリック時のコールバック（必ず選択状態にする）
-  const handleNodeClick = useCallback(
-    (event, node) => {
-      // クリック時に必ずそのノードを選択状態にする
-      const nodeElement = nodes.find((n) => n.id === node.id);
-      if (nodeElement) {
-        // ReactFlowの状態を更新して選択状態にする
-        onNodesChange([
-          {
-            type: "select",
-            id: node.id,
-            selected: true,
-          },
-          ...nodes
-            .filter((n) => n.id !== node.id && n.selected)
-            .map((n) => ({
-              type: "select",
-              id: n.id,
-              selected: false,
-            })),
-        ]);
-        setSelectedNodes([{ ...nodeElement, selected: true }]);
+      // ReactFlowの標準動作に委ねる
+      if (onNodeDragStart) {
+        onNodeDragStart(event, node);
       }
     },
-    [nodes, onNodesChange]
+    [onNodeDragStart]
   );
 
   // ズーム変更時のコールバック
@@ -237,14 +203,59 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
       />
 
       {/* メインフローエリア */}
-      <div className="w-full h-full" ref={reactFlowWrapper} onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave} onMouseMove={copyPaste.updateMousePosition}>
+      <div
+        className="w-full h-full"
+        ref={reactFlowWrapper}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onMouseMove={copyPaste.updateMousePosition}
+        tabIndex={0} // キーボードフォーカスを有効化
+        style={{ outline: "none" }} // フォーカス時のアウトラインを非表示
+        onClick={(e) => {
+          // クリック時にフォーカスを設定
+          e.currentTarget.focus();
+          console.log("[FlowEditorContent] Container focused via click");
+        }}
+        onMouseEnter={(e) => {
+          // マウスエンター時にもフォーカスを設定
+          e.currentTarget.focus();
+        }}
+        onKeyDown={(event) => {
+          console.log("[FlowEditorContent] Key pressed:", event.key, "Ctrl:", event.ctrlKey, "Meta:", event.metaKey);
+
+          // Ctrl+C または Cmd+C でコピー
+          if ((event.ctrlKey || event.metaKey) && event.key === "c") {
+            event.preventDefault();
+            console.log("[FlowEditorContent] Ctrl+C pressed");
+            if (copyPaste && typeof copyPaste.copySelectedNodes === "function") {
+              copyPaste.copySelectedNodes();
+            }
+          }
+          // Ctrl+V または Cmd+V でペースト
+          else if ((event.ctrlKey || event.metaKey) && event.key === "v") {
+            event.preventDefault();
+            console.log("[FlowEditorContent] Ctrl+V pressed, clipboard size:", copyPaste?.clipboard?.length || 0);
+            if (copyPaste && typeof copyPaste.pasteNodes === "function") {
+              copyPaste.pasteNodes();
+            }
+          }
+          // Ctrl+X または Cmd+X でカット
+          else if ((event.ctrlKey || event.metaKey) && event.key === "x") {
+            event.preventDefault();
+            console.log("[FlowEditorContent] Ctrl+X pressed");
+            if (copyPaste && typeof copyPaste.cutSelectedNodes === "function") {
+              copyPaste.cutSelectedNodes();
+            }
+          }
+        }}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
-          onNodeClick={handleNodeClick}
           onNodeDragStart={handleNodeDragStart}
           onNodeDragStop={onNodeDragStop}
           onSelectionChange={handleSelectionChange}
@@ -266,16 +277,11 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
           zoomOnDoubleClick={!isZoomDisabled}
           panOnScroll={false}
           panOnScrollMode="free"
-          panOnDrag={[2]} // 右クリック（マウスボタン2）でパン操作
+          panOnDrag={[1, 2]} // 左クリック（1）と右クリック（2）でパン操作
           deleteKeyCode={null} // デフォルトの削除機能を無効化（カスタム削除機能を使用）
           multiSelectionKeyCode={["Meta", "Control", "Shift"]} // 複数選択をCtrl/Cmd/Shiftキーで有効化
-          selectionKeyCode={null} // 範囲選択を有効化（空白エリアでの左ドラッグで範囲選択）
           selectionMode="partial" // 部分的に重なっているノードも選択対象に含める
           selectionOnDrag={true} // ドラッグによる範囲選択を有効化
-          nodesDraggable={true} // ノードのドラッグを有効化
-          nodesConnectable={true} // ノードの接続を有効化
-          nodesSelectable={true} // ノードの選択を有効化
-          edgesSelectable={true} // エッジの選択を有効化
           fitView // ノードがある場合のみfitViewを実行
           defaultViewport={{ x: 0, y: 0, zoom: 1 }} // 初期ビューポートを設定
           maxZoom={3.0} // 最大ズーム倍率を300%に制限
@@ -368,80 +374,90 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
 
               {/* 選択ノード詳細情報 */}
               <div style={{ fontSize: "12px", color: "#d1d5db" }}>
-                {selectedNodes.length > 0 ? (
-                  selectedNodes.length === 1 ? (
-                    <div>
-                      <div style={{ marginBottom: "6px" }}>
-                        <strong style={{ color: "#f3f4f6" }}>選択中ノード:</strong>
-                        <div style={{ marginLeft: "8px", marginTop: "2px" }}>
-                          <div>
-                            <strong>ラベル:</strong> {selectedNodes[0].data?.label || selectedNodes[0].type || "ノード"}
-                          </div>
-                          <div>
-                            <strong>ID:</strong> {selectedNodes[0].id}
-                          </div>
-                          <div>
-                            <strong>タイプ:</strong> {selectedNodes[0].type}
-                          </div>
-                          <div>
-                            <strong>座標:</strong> ({Math.round(selectedNodes[0].position.x)}, {Math.round(selectedNodes[0].position.y)})
-                          </div>
-                          {selectedNodes[0].width && selectedNodes[0].height && (
-                            <div>
-                              <strong>サイズ:</strong> {Math.round(selectedNodes[0].width)} × {Math.round(selectedNodes[0].height)}
+                {(() => {
+                  const selectedNodes = nodes.filter((n) => n.selected);
+                  if (selectedNodes.length > 0) {
+                    if (selectedNodes.length === 1) {
+                      const selectedNode = selectedNodes[0];
+                      return (
+                        <div>
+                          <div style={{ marginBottom: "6px" }}>
+                            <strong style={{ color: "#f3f4f6" }}>選択中ノード:</strong>
+                            <div style={{ marginLeft: "8px", marginTop: "2px" }}>
+                              <div>
+                                <strong>ラベル:</strong> {selectedNode.data?.label || selectedNode.type || "ノード"}
+                              </div>
+                              <div>
+                                <strong>ID:</strong> {selectedNode.id}
+                              </div>
+                              <div>
+                                <strong>タイプ:</strong> {selectedNode.type}
+                              </div>
+                              <div>
+                                <strong>座標:</strong> ({Math.round(selectedNode.position.x)}, {Math.round(selectedNode.position.y)})
+                              </div>
+                              {selectedNode.width && selectedNode.height && (
+                                <div>
+                                  <strong>サイズ:</strong> {Math.round(selectedNode.width)} × {Math.round(selectedNode.height)}
+                                </div>
+                              )}
+                              {selectedNode.data?.description && (
+                                <div>
+                                  <strong>説明:</strong> {selectedNode.data.description}
+                                </div>
+                              )}
+                              <div>
+                                <strong>選択:</strong> {selectedNode.selected ? "✓" : "✗"}
+                              </div>
+                              <div>
+                                <strong>ドラッグ可能:</strong> {selectedNode.draggable !== false ? "✓" : "✗"}
+                              </div>
                             </div>
-                          )}
-                          {selectedNodes[0].data?.description && (
-                            <div>
-                              <strong>説明:</strong> {selectedNodes[0].data.description}
-                            </div>
-                          )}
-                          <div>
-                            <strong>選択:</strong> {selectedNodes[0].selected ? "✓" : "✗"}
                           </div>
-                          <div>
-                            <strong>ドラッグ可能:</strong> {selectedNodes[0].draggable !== false ? "✓" : "✗"}
+                          <div style={{ fontSize: "11px", color: "#9ca3af", borderTop: "1px solid #4b5563", paddingTop: "4px" }}>
+                            総計: ノード {nodeCount}個 | エッジ {edgeCount}個
                           </div>
                         </div>
-                      </div>
-                      <div style={{ fontSize: "11px", color: "#9ca3af", borderTop: "1px solid #4b5563", paddingTop: "4px" }}>
-                        総計: ノード {nodeCount}個 | エッジ {edgeCount}個
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <div style={{ marginBottom: "6px" }}>
-                        <strong style={{ color: "#f3f4f6" }}>複数選択中:</strong> {selectedNodes.length}個のノード
-                      </div>
-                      <div style={{ marginLeft: "8px", marginBottom: "6px" }}>
-                        {selectedNodes.slice(0, 3).map((node, index) => (
-                          <div key={node.id} style={{ marginBottom: "2px" }}>
-                            <span style={{ fontWeight: "500" }}>{index + 1}.</span> {node.data?.label || node.type}
-                            <span style={{ color: "#9ca3af" }}>
-                              {" "}
-                              ({Math.round(node.position.x)}, {Math.round(node.position.y)})
-                            </span>
+                      );
+                    } else {
+                      return (
+                        <div>
+                          <div style={{ marginBottom: "6px" }}>
+                            <strong style={{ color: "#f3f4f6" }}>複数選択中:</strong> {selectedNodes.length}個のノード
                           </div>
-                        ))}
-                        {selectedNodes.length > 3 && <div style={{ color: "#9ca3af", fontStyle: "italic" }}>...他 {selectedNodes.length - 3}個</div>}
+                          <div style={{ marginLeft: "8px", marginBottom: "6px" }}>
+                            {selectedNodes.slice(0, 3).map((node, index) => (
+                              <div key={node.id} style={{ marginBottom: "2px" }}>
+                                <span style={{ fontWeight: "500" }}>{index + 1}.</span> {node.data?.label || node.type}
+                                <span style={{ color: "#9ca3af" }}>
+                                  {" "}
+                                  ({Math.round(node.position.x)}, {Math.round(node.position.y)})
+                                </span>
+                              </div>
+                            ))}
+                            {selectedNodes.length > 3 && <div style={{ color: "#9ca3af", fontStyle: "italic" }}>...他 {selectedNodes.length - 3}個</div>}
+                          </div>
+                          <div style={{ fontSize: "11px", color: "#9ca3af", borderTop: "1px solid #4b5563", paddingTop: "4px" }}>
+                            総計: ノード {nodeCount}個 | エッジ {edgeCount}個
+                          </div>
+                        </div>
+                      );
+                    }
+                  } else {
+                    return (
+                      <div>
+                        <div style={{ marginBottom: "4px" }}>
+                          <strong style={{ color: "#f3f4f6" }}>フロー統計:</strong>
+                        </div>
+                        <div style={{ marginLeft: "8px" }}>
+                          <div>ノード: {nodeCount}個</div>
+                          <div>エッジ: {edgeCount}個</div>
+                          <div style={{ color: "#9ca3af", fontSize: "11px", marginTop: "4px" }}>ノードをクリックして詳細を表示</div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: "11px", color: "#9ca3af", borderTop: "1px solid #4b5563", paddingTop: "4px" }}>
-                        総計: ノード {nodeCount}個 | エッジ {edgeCount}個
-                      </div>
-                    </div>
-                  )
-                ) : (
-                  <div>
-                    <div style={{ marginBottom: "4px" }}>
-                      <strong style={{ color: "#f3f4f6" }}>フロー統計:</strong>
-                    </div>
-                    <div style={{ marginLeft: "8px" }}>
-                      <div>ノード: {nodeCount}個</div>
-                      <div>エッジ: {edgeCount}個</div>
-                      <div style={{ color: "#9ca3af", fontSize: "11px", marginTop: "4px" }}>ノードをクリックして詳細を表示</div>
-                    </div>
-                  </div>
-                )}
+                    );
+                  }
+                })()}
               </div>
             </div>
           </Panel>

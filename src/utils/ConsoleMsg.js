@@ -14,18 +14,23 @@ function ConsoleMsg(level, message, ...args) {
   switch (level) {
     case "log":
       trace(fullMessage); // 一般ログ
+      console.log(`[LOG] ${fullMessage}`); // デバッグ用
       break;
     case "debug":
       debug(fullMessage); // デバッグログ
+      console.log(`[DEBUG] ${fullMessage}`); // デバッグ用
       break;
     case "info":
       info(fullMessage); // 情報ログ
+      console.log(`[INFO] ${fullMessage}`); // デバッグ用
       break;
     case "warn":
       warn(fullMessage); // 警告ログ
+      console.log(`[WARN] ${fullMessage}`); // デバッグ用
       break;
     case "error":
       error(fullMessage); // エラーログ
+      console.log(`[ERROR] ${fullMessage}`); // デバッグ用
       break;
     default:
       // 未知のレベルの場合はconsole.logで出力
