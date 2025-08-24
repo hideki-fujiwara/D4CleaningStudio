@@ -22,7 +22,7 @@ import { useCallback, useState, useRef, useEffect } from "react";
 import { useNodesState, useEdgesState, addEdge, useReactFlow } from "@xyflow/react";
 import ConsoleMsg from "../../../../utils/ConsoleMsg";
 import DebugConfig from "../../../../utils/DebugConfig";
-import { initialNodes, initialEdges } from "../data/initialData";
+import { initialNodes, initialEdges } from "../data/d4flow_sample";
 import { useCopyPaste } from "./useCopyPaste";
 import { useFileSave } from "./useFileSave";
 import { useFileLoad } from "./useFileLoad";

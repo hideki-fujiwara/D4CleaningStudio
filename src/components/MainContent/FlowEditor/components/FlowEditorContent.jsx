@@ -93,20 +93,45 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
     requestTabClose,
   } = useFlowEditor(initialMode, loadedData, filePath, fileName, tabId, onCreateNewTab, onUpdateTab, onRequestTabClose);
 
-  // 初期フォーカス設定
+  // グローバルキーボードイベントリスナー（コピー&ペースト機能）
   React.useEffect(() => {
-    const focusContainer = () => {
-      if (reactFlowWrapper.current) {
-        reactFlowWrapper.current.focus();
-        console.log("[FlowEditorContent] Focus set to container");
+    const handleKeyDown = (event) => {
+      // 入力フィールドにフォーカスがある場合は処理しない
+      if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA" || event.target.contentEditable === "true") {
+        return;
+      }
+
+      // Ctrl+C または Cmd+C でコピー
+      if ((event.ctrlKey || event.metaKey) && event.key === "c") {
+        event.preventDefault();
+        if (copyPaste && typeof copyPaste.copySelectedNodes === "function") {
+          copyPaste.copySelectedNodes();
+        }
+      }
+      // Ctrl+V または Cmd+V でペースト
+      else if ((event.ctrlKey || event.metaKey) && event.key === "v") {
+        event.preventDefault();
+        if (copyPaste && typeof copyPaste.pasteNodes === "function") {
+          copyPaste.pasteNodes();
+        }
+      }
+      // Ctrl+X または Cmd+X でカット
+      else if ((event.ctrlKey || event.metaKey) && event.key === "x") {
+        event.preventDefault();
+        if (copyPaste && typeof copyPaste.cutSelectedNodes === "function") {
+          copyPaste.cutSelectedNodes();
+        }
       }
     };
 
-    // 少し遅延してフォーカス設定（ReactFlowの初期化後）
-    const timer = setTimeout(focusContainer, 100);
+    // グローバルイベントリスナーを登録
+    document.addEventListener("keydown", handleKeyDown);
 
-    return () => clearTimeout(timer);
-  }, []);
+    // クリーンアップ
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [copyPaste]);
 
   // 履歴情報が変更されたときに親に通知
   React.useEffect(() => {
@@ -203,53 +228,7 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
       />
 
       {/* メインフローエリア */}
-      <div
-        className="w-full h-full"
-        ref={reactFlowWrapper}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onMouseMove={copyPaste.updateMousePosition}
-        tabIndex={0} // キーボードフォーカスを有効化
-        style={{ outline: "none" }} // フォーカス時のアウトラインを非表示
-        onClick={(e) => {
-          // クリック時にフォーカスを設定
-          e.currentTarget.focus();
-          console.log("[FlowEditorContent] Container focused via click");
-        }}
-        onMouseEnter={(e) => {
-          // マウスエンター時にもフォーカスを設定
-          e.currentTarget.focus();
-        }}
-        onKeyDown={(event) => {
-          console.log("[FlowEditorContent] Key pressed:", event.key, "Ctrl:", event.ctrlKey, "Meta:", event.metaKey);
-
-          // Ctrl+C または Cmd+C でコピー
-          if ((event.ctrlKey || event.metaKey) && event.key === "c") {
-            event.preventDefault();
-            console.log("[FlowEditorContent] Ctrl+C pressed");
-            if (copyPaste && typeof copyPaste.copySelectedNodes === "function") {
-              copyPaste.copySelectedNodes();
-            }
-          }
-          // Ctrl+V または Cmd+V でペースト
-          else if ((event.ctrlKey || event.metaKey) && event.key === "v") {
-            event.preventDefault();
-            console.log("[FlowEditorContent] Ctrl+V pressed, clipboard size:", copyPaste?.clipboard?.length || 0);
-            if (copyPaste && typeof copyPaste.pasteNodes === "function") {
-              copyPaste.pasteNodes();
-            }
-          }
-          // Ctrl+X または Cmd+X でカット
-          else if ((event.ctrlKey || event.metaKey) && event.key === "x") {
-            event.preventDefault();
-            console.log("[FlowEditorContent] Ctrl+X pressed");
-            if (copyPaste && typeof copyPaste.cutSelectedNodes === "function") {
-              copyPaste.cutSelectedNodes();
-            }
-          }
-        }}
-      >
+      <div className="w-full h-full" ref={reactFlowWrapper} onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave} onMouseMove={copyPaste.updateMousePosition}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -265,8 +244,6 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
           style={{
             width: "100%",
             height: "100%",
-            transition: "all 0.3s",
-            cursor: isZoomDisabled ? "not-allowed" : "default",
             ...(isDragOver && {
               outline: "2px solid #3b82f6",
               outlineOffset: "-2px",
@@ -277,19 +254,19 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
           zoomOnDoubleClick={!isZoomDisabled}
           panOnScroll={false}
           panOnScrollMode="free"
-          panOnDrag={[1, 2]} // 左クリック（1）と右クリック（2）でパン操作
-          deleteKeyCode={null} // デフォルトの削除機能を無効化（カスタム削除機能を使用）
-          multiSelectionKeyCode={["Meta", "Control", "Shift"]} // 複数選択をCtrl/Cmd/Shiftキーで有効化
-          selectionMode="partial" // 部分的に重なっているノードも選択対象に含める
-          selectionOnDrag={true} // ドラッグによる範囲選択を有効化
-          fitView // ノードがある場合のみfitViewを実行
-          defaultViewport={{ x: 0, y: 0, zoom: 1 }} // 初期ビューポートを設定
-          maxZoom={3.0} // 最大ズーム倍率を300%に制限
-          minZoom={0.5} // 最小ズーム倍率を50%に制限
+          panOnDrag={[1, 2]}
+          deleteKeyCode={null}
+          multiSelectionKeyCode={["Meta", "Control", "Shift"]}
+          selectionMode="partial"
+          selectionOnDrag={true}
+          fitView
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          maxZoom={3.0}
+          minZoom={0.5}
           proOptions={{
-            account: "paid-pro", // ライセンスアカウントタイプ
-            hideAttribution: true, // クレジット表示の非表示
-            hideDevTools: true, // 開発者ツールの非表示
+            account: "paid-pro",
+            hideAttribution: true,
+            hideDevTools: true,
           }}
         >
           {/* 背景グリッド */}
