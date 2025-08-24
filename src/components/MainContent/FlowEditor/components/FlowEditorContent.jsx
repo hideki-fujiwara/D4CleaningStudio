@@ -9,13 +9,14 @@
  * @author D4CleaningStudio
  * @version 2.0.0 (Refactored)
  */
-import React, { useState, useCallback } from "react";
-import { ReactFlow, MiniMap, Controls, Background, BackgroundVariant, ConnectionLineType, Panel, NodeResizer, ReactFlowProvider } from "@xyflow/react";
+import React, { useState, useCallback, useEffect } from "react";
+import { ReactFlow, MiniMap, Controls, Background, BackgroundVariant, ConnectionLineType, Panel, NodeResizer, ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { nodeTypes } from "../Nodes/CustomNodes";
 import FlowEditorToolbar from "../FlowEditorToolbar";
 import { useFlowEditor } from "../hooks/useFlowEditor";
 import { useHtmlDragAndDrop } from "../hooks/useHtmlDragAndDrop";
+import SaveConfirmDialog from "./SaveConfirmDialog";
 
 /**
  * FlowEditorのメインコンテンツ実装
@@ -55,6 +56,12 @@ function FlowEditorContent({ initialMode, loadedData, filePath, fileName, tabId,
  */
 function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, tabId, onCreateNewTab, onUpdateTab, onRequestTabClose, onHistoryChange }) {
   // ========================================================================================
+  // React Flow インスタンス
+  // ========================================================================================
+
+  const { getViewport, setViewport } = useReactFlow();
+
+  // ========================================================================================
   // カスタムフック使用
   // ========================================================================================
 
@@ -91,6 +98,10 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
     hasUnsavedChanges,
     fileName: displayFileName,
     requestTabClose,
+    // ユーティリティ
+    fitView,
+    // ダイアログ制御
+    saveConfirmDialog,
   } = useFlowEditor(initialMode, loadedData, filePath, fileName, tabId, onCreateNewTab, onUpdateTab, onRequestTabClose);
 
   // グローバルキーボードイベントリスナー（コピー&ペースト機能）
@@ -120,6 +131,13 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
         event.preventDefault();
         if (copyPaste && typeof copyPaste.cutSelectedNodes === "function") {
           copyPaste.cutSelectedNodes();
+        }
+      }
+      // Delete キーで削除
+      else if (event.key === "Delete") {
+        event.preventDefault();
+        if (copyPaste && typeof copyPaste.deleteSelectedElements === "function") {
+          copyPaste.deleteSelectedElements();
         }
       }
     };
@@ -152,6 +170,28 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
   const [zoom, setZoom] = useState(1);
   const [isZoomDisabled, setIsZoomDisabled] = useState(false);
 
+  // ズーム値の定期更新
+  useEffect(() => {
+    const updateZoom = () => {
+      try {
+        const viewport = getViewport();
+        if (viewport && viewport.zoom !== undefined && viewport.zoom !== zoom) {
+          setZoom(viewport.zoom);
+        }
+      } catch (error) {
+        // getViewportがまだ準備されていない場合のエラーハンドリング
+      }
+    };
+
+    // 初期値設定
+    updateZoom();
+
+    // 定期的にズーム値を更新
+    const interval = setInterval(updateZoom, 100);
+
+    return () => clearInterval(interval);
+  }, [getViewport, zoom]);
+
   // ノード選択変更時のコールバック（ReactFlowの標準動作を活用）
   const handleSelectionChange = useCallback(
     (params) => {
@@ -174,8 +214,11 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
   );
 
   // ズーム変更時のコールバック
-  const onMove = useCallback(() => {
-    // ReactFlowのズーム値を取得する処理は削除
+  const onMove = useCallback((event, viewport) => {
+    // ReactFlowのズーム値を取得して状態を更新
+    if (viewport && viewport.zoom !== undefined) {
+      setZoom(viewport.zoom);
+    }
   }, []);
 
   // ズーム無効状態変更ハンドラー
@@ -183,15 +226,25 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
     setIsZoomDisabled(disabled);
   }, []);
 
-  // ズーム率変更ハンドラー（スライダー用）
+  // ズーム率変更ハンドラー（ツールバーのスライダーやボタン用）
   const handleZoomChange = useCallback(
     (newZoom) => {
-      if (!isZoomDisabled) {
-        // ReactFlowのズーム変更処理は削除
-        setZoom(newZoom);
+      if (!isZoomDisabled && setViewport) {
+        try {
+          const currentViewport = getViewport();
+          setViewport({
+            ...currentViewport,
+            zoom: newZoom,
+          });
+          setZoom(newZoom);
+        } catch (error) {
+          console.warn("ズーム変更に失敗しました:", error);
+          // フォールバックとして状態のみ更新
+          setZoom(newZoom);
+        }
       }
     },
-    [isZoomDisabled]
+    [isZoomDisabled, setViewport, getViewport]
   );
 
   // ========================================================================================
@@ -446,6 +499,15 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
           )}
         </ReactFlow>
       </div>
+
+      {/* ファイル読み込み確認ダイアログ */}
+      <SaveConfirmDialog
+        isOpen={saveConfirmDialog.isOpen}
+        fileName={saveConfirmDialog.fileName}
+        onSave={saveConfirmDialog.onSave}
+        onDiscard={saveConfirmDialog.onDiscard}
+        onCancel={saveConfirmDialog.onCancel}
+      />
     </div>
   );
 }

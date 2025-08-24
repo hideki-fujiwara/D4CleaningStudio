@@ -67,11 +67,10 @@ export const useCopyPaste = ({
    */
   const onSelectionChange = useCallback(({ nodes }) => {
     setSelectedNodes(nodes);
-    ConsoleMsg(
-      "info",
-      `選択ノード数: ${nodes.length}`,
-      nodes.map((n) => n.id)
-    );
+    ConsoleMsg("info", `選択ノード数: ${nodes.length}`, {
+      nodeIds: nodes.map((n) => n.id),
+      nodeDetails: nodes.map((n) => ({ id: n.id, type: n.type, selected: n.selected })),
+    });
   }, []);
 
   useOnSelectionChange({ onChange: onSelectionChange });
@@ -83,18 +82,24 @@ export const useCopyPaste = ({
   /**
    * 新しいノードIDを生成（カウンターを更新しない版）
    */
-  const generateNewNodeId = useCallback((offset = 0) => {
-    return `node_${nodeCounter + offset}`;
-  }, [nodeCounter]);
+  const generateNewNodeId = useCallback(
+    (offset = 0) => {
+      return `node_${nodeCounter + offset}`;
+    },
+    [nodeCounter]
+  );
 
   /**
    * ノードカウンターを指定された数だけ増加
    */
-  const incrementNodeCounter = useCallback((count) => {
-    if (setNodeCounter) {
-      setNodeCounter(prev => prev + count);
-    }
-  }, [setNodeCounter]);
+  const incrementNodeCounter = useCallback(
+    (count) => {
+      if (setNodeCounter) {
+        setNodeCounter((prev) => prev + count);
+      }
+    },
+    [setNodeCounter]
+  );
 
   /**
    * ノードを複製（新しいIDと位置で）
@@ -103,7 +108,7 @@ export const useCopyPaste = ({
     (node, offsetX = 20, offsetY = 20) => {
       const newId = generateNewNodeId(0);
       incrementNodeCounter(1); // 1つ分カウンターを増加
-      
+
       return {
         ...node,
         id: newId,
@@ -137,6 +142,30 @@ export const useCopyPaste = ({
   // ========================================================================================
 
   /**
+   * すべての選択を解除
+   */
+  const clearSelection = useCallback(() => {
+    ConsoleMsg("info", "選択を解除中...");
+
+    // React Flowのノード選択を解除
+    const allNodes = getNodes();
+    const deselectedNodes = allNodes.map((node) => ({
+      ...node,
+      selected: false,
+    }));
+
+    // ノードを更新
+    if (setNodes) {
+      setNodes(deselectedNodes);
+    }
+
+    // 内部状態も更新
+    setSelectedNodes([]);
+
+    ConsoleMsg("success", "選択を解除しました");
+  }, [getNodes, setNodes]);
+
+  /**
    * 選択されたノードをコピー
    */
   const copySelectedNodes = useCallback(() => {
@@ -146,8 +175,8 @@ export const useCopyPaste = ({
     }
 
     // 選択されたノード群の左上端を基準点として計算
-    const minX = Math.min(...selectedNodes.map(node => node.position.x));
-    const minY = Math.min(...selectedNodes.map(node => node.position.y));
+    const minX = Math.min(...selectedNodes.map((node) => node.position.x));
+    const minY = Math.min(...selectedNodes.map((node) => node.position.y));
 
     // 選択されたノードをクリップボードにコピー（基準点からの相対位置を保存）
     const copiedNodes = selectedNodes.map((node) => ({
@@ -158,11 +187,11 @@ export const useCopyPaste = ({
       relativePosition: {
         x: node.position.x - minX,
         y: node.position.y - minY,
-      }
+      },
     }));
 
     setClipboard(copiedNodes);
-    
+
     // ペーストカウントをリセット（新しいコピー操作の開始）
     pasteCount.current = 0;
     lastPasteTime.current = 0;
@@ -179,7 +208,7 @@ export const useCopyPaste = ({
    */
   const pasteNodes = useCallback(() => {
     ConsoleMsg("info", "ペースト処理開始", { clipboardSize: clipboard.length });
-    
+
     if (clipboard.length === 0) {
       ConsoleMsg("warning", "ペーストするノードがクリップボードにありません");
       return;
@@ -200,7 +229,7 @@ export const useCopyPaste = ({
 
     // 現在のマウス位置をフロー座標に変換
     const flowPosition = screenToFlowPosition(mousePosition.current);
-    
+
     // 連続ペースト時のオフセット計算（30px * ペースト回数）
     const pasteOffset = 30 * (pasteCount.current - 1);
 
@@ -209,13 +238,13 @@ export const useCopyPaste = ({
       // 保存された相対位置を使用（なければ0として扱う）
       const relativeX = node.relativePosition?.x || 0;
       const relativeY = node.relativePosition?.y || 0;
-      
+
       // マウス位置を基準として、相対位置を維持したままペースト
       const newPosition = {
         x: flowPosition.x + relativeX + pasteOffset,
-        y: flowPosition.y + relativeY + pasteOffset
+        y: flowPosition.y + relativeY + pasteOffset,
       };
-      
+
       return {
         ...node,
         id: generateNewNodeId(index), // インデックスを使ってユニークなIDを生成
@@ -234,14 +263,14 @@ export const useCopyPaste = ({
 
     // 既存のノードの選択を解除
     const currentNodes = nodes;
-    const deselectedNodes = currentNodes.map(node => ({
+    const deselectedNodes = currentNodes.map((node) => ({
       ...node,
-      selected: false
+      selected: false,
     }));
 
     // 選択解除されたノードとペーストされたノードを結合
     const allNewNodes = [...deselectedNodes, ...pastedNodes];
-    
+
     // ノードを更新
     if (setNodes) {
       setNodes(allNewNodes);
@@ -253,7 +282,7 @@ export const useCopyPaste = ({
         onHistoryChange(allNewNodes, edges);
       }, 100);
     }
-    
+
     ConsoleMsg(
       "success",
       `${pastedNodes.length}個のノードをペーストしました (${pasteCount.current}回目、相対位置保持)`,
@@ -265,22 +294,39 @@ export const useCopyPaste = ({
    * 選択されたノードとエッジを削除
    */
   const deleteSelectedElements = useCallback(() => {
+    ConsoleMsg("info", "削除処理開始", {
+      selectedNodesLength: selectedNodes.length,
+      selectedNodeIds: selectedNodes.map((n) => n.id),
+    });
+
     if (selectedNodes.length === 0) {
       ConsoleMsg("warning", "削除するノードが選択されていません");
       return;
     }
 
-    const selectedNodeIds = selectedNodes.map(node => node.id);
+    const selectedNodeIds = selectedNodes.map((node) => node.id);
     const allNodes = getNodes();
     const allEdges = getEdges();
 
+    ConsoleMsg("debug", "削除前の状態", {
+      totalNodes: allNodes.length,
+      totalEdges: allEdges.length,
+      selectedCount: selectedNodeIds.length,
+      selectedIds: selectedNodeIds,
+    });
+
     // 選択されたノードを除外
-    const remainingNodes = allNodes.filter(node => !selectedNodeIds.includes(node.id));
-    
+    const remainingNodes = allNodes.filter((node) => !selectedNodeIds.includes(node.id));
+
     // 選択されたノードに接続されているエッジを除外
-    const remainingEdges = allEdges.filter(edge => 
-      !selectedNodeIds.includes(edge.source) && !selectedNodeIds.includes(edge.target)
-    );
+    const remainingEdges = allEdges.filter((edge) => !selectedNodeIds.includes(edge.source) && !selectedNodeIds.includes(edge.target));
+
+    ConsoleMsg("debug", "削除後の状態", {
+      remainingNodes: remainingNodes.length,
+      remainingEdges: remainingEdges.length,
+      deletedNodes: allNodes.length - remainingNodes.length,
+      deletedEdges: allEdges.length - remainingEdges.length,
+    });
 
     // ノードとエッジを更新
     setNodes(remainingNodes);
@@ -293,7 +339,7 @@ export const useCopyPaste = ({
       }, 100);
     }
 
-    ConsoleMsg("warning", `${selectedNodes.length}個のノードと関連エッジを削除しました`, selectedNodeIds);
+    ConsoleMsg("success", `${selectedNodes.length}個のノードと関連エッジを削除しました`, selectedNodeIds);
   }, [selectedNodes, getNodes, getEdges, setNodes, setEdges, onHistoryChange]);
 
   /**
@@ -308,8 +354,8 @@ export const useCopyPaste = ({
     ConsoleMsg("info", "カット処理開始", { selectedNodes: selectedNodes.length });
 
     // まずコピー処理を実行
-    const minX = Math.min(...selectedNodes.map(node => node.position.x));
-    const minY = Math.min(...selectedNodes.map(node => node.position.y));
+    const minX = Math.min(...selectedNodes.map((node) => node.position.x));
+    const minY = Math.min(...selectedNodes.map((node) => node.position.y));
 
     const copiedNodes = selectedNodes.map((node) => ({
       ...node,
@@ -317,30 +363,28 @@ export const useCopyPaste = ({
       relativePosition: {
         x: node.position.x - minX,
         y: node.position.y - minY,
-      }
+      },
     }));
 
     // クリップボードに保存
     setClipboard(copiedNodes);
-    
+
     // ペーストカウントをリセット
     pasteCount.current = 0;
     lastPasteTime.current = 0;
 
-    ConsoleMsg("success", "ノードをクリップボードにコピー完了", { 
+    ConsoleMsg("success", "ノードをクリップボードにコピー完了", {
       clipboardCount: copiedNodes.length,
-      nodeIds: copiedNodes.map(n => n.id)
+      nodeIds: copiedNodes.map((n) => n.id),
     });
 
     // 削除処理のための情報を事前に取得
-    const selectedNodeIds = selectedNodes.map(node => node.id);
+    const selectedNodeIds = selectedNodes.map((node) => node.id);
     const allNodes = getNodes();
     const allEdges = getEdges();
 
-    const remainingNodes = allNodes.filter(node => !selectedNodeIds.includes(node.id));
-    const remainingEdges = allEdges.filter(edge => 
-      !selectedNodeIds.includes(edge.source) && !selectedNodeIds.includes(edge.target)
-    );
+    const remainingNodes = allNodes.filter((node) => !selectedNodeIds.includes(node.id));
+    const remainingEdges = allEdges.filter((edge) => !selectedNodeIds.includes(edge.source) && !selectedNodeIds.includes(edge.target));
 
     // ノードとエッジを更新（削除実行）
     setNodes(remainingNodes);
@@ -353,14 +397,10 @@ export const useCopyPaste = ({
       }, 100);
     }
 
-    ConsoleMsg(
-      "success",
-      `${copiedNodes.length}個のノードをカットしました（クリップボード保持）`,
-      { 
-        cutNodeIds: copiedNodes.map(n => n.id),
-        clipboardSize: copiedNodes.length 
-      }
-    );
+    ConsoleMsg("success", `${copiedNodes.length}個のノードをカットしました（クリップボード保持）`, {
+      cutNodeIds: copiedNodes.map((n) => n.id),
+      clipboardSize: copiedNodes.length,
+    });
   }, [selectedNodes, getNodes, getEdges, setNodes, setEdges, onHistoryChange]);
 
   // ========================================================================================
@@ -396,6 +436,7 @@ export const useCopyPaste = ({
     pasteNodes,
     cutSelectedNodes,
     deleteSelectedElements,
+    clearSelection,
     updateMousePosition,
 
     // デバッグ情報

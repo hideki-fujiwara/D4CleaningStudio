@@ -298,9 +298,12 @@ const ViewSettingsGroup = ({ isZoomDisabled = false, onZoomDisableChange, zoom =
       tooltip={isZoomDisabled ? "クリックでズーム操作を有効にする" : "クリックでズーム操作を無効にする"}
       isPressed={isZoomDisabled}
       onChange={(pressed) => onZoomDisableChange?.(pressed)}
+      className={`${BUTTON_STYLES.toggle} flex items-center gap-1 px-2 py-1`}
     >
-      {isZoomDisabled ? <LockIcon className="w-6 h-6 text-warning" /> : <UnlockIcon className="w-6 h-6 text-success" />}
-      <span className="text-md text-base-content font-mono">{Math.round(zoom * 100)}%</span>
+      <div className="flex items-center gap-1">
+        {isZoomDisabled ? <LockIcon className="w-5 h-5 text-warning flex-shrink-0" /> : <UnlockIcon className="w-5 h-5 text-success flex-shrink-0" />}
+        <span className="text-sm text-base-content font-mono whitespace-nowrap w-[4ch] text-right">{(zoom * 100).toFixed(0)}%</span>
+      </div>
     </TooltipToggleButton>
   </Group>
 );
@@ -367,7 +370,9 @@ const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste, historyLengt
         <span className="text-base-300">|</span>
         <span className="font-mono">エッジ: {edgeCount}</span>
         <span className="text-base-300">|</span>
-        <span className="font-mono">倍率: {Math.round(zoom * 100)}%</span>
+        <span className="font-mono">
+          倍率: <span className="inline-block w-[3ch] text-right">{(zoom * 100).toFixed(0)}</span>%
+        </span>
         <span className="text-base-300">|</span>
         <span className="font-mono">履歴: {historyLength > 0 ? `${currentHistoryIndex}/${historyLength}` : "0"}</span>
         {copyPaste && (
@@ -389,7 +394,9 @@ const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste, historyLengt
           <div className="text-xs space-y-1">
             <div>📦 総ノード数: {nodeCount}</div>
             <div>🔗 総エッジ数: {edgeCount}</div>
-            <div>🔍 表示倍率: {Math.round(zoom * 100)}%</div>
+            <div>
+              🔍 表示倍率: <span className="inline-block w-[3ch] text-right">{(zoom * 100).toFixed(0)}</span>%
+            </div>
             {copyPaste && (
               <>
                 <div className="border-t border-base-content/20 pt-1 mt-2">

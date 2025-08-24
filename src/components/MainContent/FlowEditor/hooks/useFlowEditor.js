@@ -14,6 +14,7 @@
  * - Ctrl+O: Open（ファイルを開く）
  * - Ctrl+N: New（新規ファイル）
  * - Ctrl+R: Reset（フローリセット）
+ * - Escape: Clear Selection（選択解除）
  *
  * @author D4CleaningStudio
  * @version 2.0.0 (Refactored)
@@ -78,7 +79,7 @@ export const useFlowEditor = (
   const [edges, setEdges, onEdgesChange] = useEdgesState(getInitialEdges());
 
   // ReactFlowのAPI取得
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
 
   // ノードカウンター（新しいノードのID生成用）
   const getInitialNodeCounter = () => {
@@ -214,11 +215,26 @@ export const useFlowEditor = (
       fileSaveHook.setCurrentFilePath(fileInfo.filePath);
       fileSaveHook.setDisplayFileName(fileInfo.fileName);
       fileSaveHook.setUnsavedChanges(false);
+      
+      // ファイル読み込み後にfitViewを実行（短い遅延後）
+      setTimeout(() => {
+        try {
+          fitView({ padding: 0.1, duration: 300 });
+          ConsoleMsg("info", "ファイル読み込み後にfitViewを実行しました");
+        } catch (error) {
+          console.warn("fitView実行に失敗しました:", error);
+        }
+      }, 200);
     },
     onHistoryReset: historyHook.resetHistory,
     onHistoryInitialize: historyHook.initializeHistory,
     onCreateNewTab,
-    hasUnsavedChanges: () => fileSaveHook.hasUnsavedChanges,
+    hasUnsavedChanges: () => {
+      // 未保存の変更があるか、履歴がある場合（新規ファイルでも編集している場合）は保存確認を表示
+      return fileSaveHook.hasUnsavedChanges || historyHook.historyLength > 1;
+    },
+    onSaveFile: fileSaveHook.saveFlow,
+    getCurrentFileName: () => fileSaveHook.displayFileName || "新規ファイル",
   });
 
   // ========================================================================================
@@ -244,11 +260,19 @@ export const useFlowEditor = (
         // 読み込み完了後、現在の状態を履歴の基準として初期化
         historyHook.initializeHistory(nodes, edges);
         ConsoleMsg("info", "ファイル読み込み完了：履歴を初期化しました");
+        
+        // ファイル読み込み時のfitViewを実行
+        try {
+          fitView({ padding: 0.1, duration: 300 });
+          ConsoleMsg("info", "初期読み込み後にfitViewを実行しました");
+        } catch (error) {
+          console.warn("初期読み込み時のfitView実行に失敗しました:", error);
+        }
       }, 200);
 
       setIsInitialized(true);
     }
-  }, [initialMode, isInitialized, nodes, edges]);
+  }, [initialMode, isInitialized, nodes, edges, fitView]);
 
   // ========================================================================================
   // ノード操作
@@ -379,11 +403,13 @@ export const useFlowEditor = (
   const historyHookRef = useRef();
   const fileSaveHookRef = useRef();
   const fileLoadHookRef = useRef();
+  const copyPasteHookRef = useRef();
 
   // Refを更新
   historyHookRef.current = historyHook;
   fileSaveHookRef.current = fileSaveHook;
   fileLoadHookRef.current = fileLoadHook;
+  copyPasteHookRef.current = copyPasteHook;
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -444,6 +470,17 @@ export const useFlowEditor = (
         historyHookRef.current.resetHistory();
       }
 
+      // Escape（選択解除）
+      if (event.key === "Escape") {
+        event.preventDefault();
+        ConsoleMsg("info", "ESC キー: ノード選択を解除します");
+        
+        // React Flowのノード選択を解除
+        if (copyPasteHookRef.current && copyPasteHookRef.current.clearSelection) {
+          copyPasteHookRef.current.clearSelection();
+        }
+      }
+
       // F5（リロード）処理 - 設定に基づいて制御
       if (event.key === "F5") {
         const isDebugMode = DebugConfig.isDebugMode;
@@ -471,13 +508,13 @@ export const useFlowEditor = (
   // ========================================================================================
 
   useEffect(() => {
-    if (onUpdateTab && tabId) {
+    if (onUpdateTabRef.current && tabIdRef.current) {
       const debounceTimer = setTimeout(() => {
         // 履歴の変更を未保存状態として扱う
         const hasHistoryChanges = historyHook.currentHistoryIndex > 0 || historyHook.historyLength > 0;
         const hasUnsavedChanges = fileSaveHook.hasUnsavedChanges || hasHistoryChanges;
 
-        onUpdateTab(tabId, {
+        onUpdateTabRef.current(tabIdRef.current, {
           hasUnsavedChanges,
           title: fileSaveHook.fileName,
         });
@@ -485,7 +522,7 @@ export const useFlowEditor = (
 
       return () => clearTimeout(debounceTimer);
     }
-  }, [fileSaveHook.hasUnsavedChanges, fileSaveHook.fileName, historyHook.currentHistoryIndex, historyHook.historyLength, onUpdateTab, tabId]);
+  }, [fileSaveHook.hasUnsavedChanges, fileSaveHook.fileName, historyHook.currentHistoryIndex, historyHook.historyLength]);
 
   // ========================================================================================
   // 返り値
@@ -539,8 +576,12 @@ export const useFlowEditor = (
     addNode,
     setNodes,
     setEdges,
+    fitView,
 
     // コピー・ペースト機能
     copyPaste: copyPasteHook,
+
+    // ダイアログ制御
+    saveConfirmDialog: fileLoadHook.saveConfirmDialog,
   };
 };

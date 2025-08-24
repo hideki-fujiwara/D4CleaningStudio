@@ -13,6 +13,7 @@
 import { useState, useCallback, useRef } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { appDataDir, join } from "@tauri-apps/api/path";
 import ConsoleMsg from "../../../../utils/ConsoleMsg";
 
 /**
@@ -64,8 +65,9 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, nodeCounter, i
    */
   const getDefaultSavePath = useCallback(async (fileName) => {
     try {
-      const srcPath = await window.__TAURI__.path.join(await window.__TAURI__.path.appDir(), "src");
-      return await window.__TAURI__.path.join(srcPath, `${fileName}.d4flow`);
+      const appDir = await appDataDir();
+      const srcPath = await join(appDir, "src");
+      return await join(srcPath, `${fileName}.d4flow`);
     } catch (error) {
       console.error("デフォルトパス取得エラー:", error);
       return `${fileName}.d4flow`;
@@ -137,6 +139,8 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, nodeCounter, i
           setDisplayFileName(fileNameOnly);
           setHasUnsavedChanges(false);
 
+          ConsoleMsg("info", `新規ファイル保存完了: ファイル名を "${fileNameOnly}" に更新`);
+
           // 保存成功時に履歴をリセット
           if (onHistoryReset) {
             onHistoryReset();
@@ -202,6 +206,8 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, nodeCounter, i
         setDisplayFileName(fileNameOnly);
         setHasUnsavedChanges(false);
 
+        ConsoleMsg("info", `名前をつけて保存完了: ファイル名を "${fileNameOnly}" に更新`);
+
         // 保存成功時に履歴をリセット
         if (onHistoryReset) {
           onHistoryReset();
@@ -253,8 +259,6 @@ export const useFileSave = ({ exportFlowData, getNodes, getEdges, nodeCounter, i
 
     ConsoleMsg("info", "新規フローを作成しました");
   }, [hasUnsavedChanges, onHistoryReset, onNewFlow]);
-
-
 
   // ========================================================================================
   // タブクローズ確認

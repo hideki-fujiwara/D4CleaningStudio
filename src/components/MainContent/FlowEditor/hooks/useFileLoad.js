@@ -10,7 +10,7 @@
  * @version 1.0.0
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import ConsoleMsg from "../../../../utils/ConsoleMsg";
@@ -27,9 +27,22 @@ import ConsoleMsg from "../../../../utils/ConsoleMsg";
  * @param {Function} params.onHistoryInitialize - 履歴初期化コールバック（読み込み状態を基準として設定）
  * @param {Function} params.onCreateNewTab - 新規タブ作成コールバック
  * @param {Function} params.hasUnsavedChanges - 未保存の変更があるかどうかを取得する関数
+ * @param {Function} params.onSaveFile - ファイル保存機能
+ * @param {Function} params.getCurrentFileName - 現在のファイル名を取得する関数
  * @returns {Object} ファイル読み込み機能
  */
-export const useFileLoad = ({ setNodes, setEdges, setNodeCounter, onFileLoaded = null, onHistoryReset = null, onHistoryInitialize = null, onCreateNewTab = null, hasUnsavedChanges = () => false }) => {
+export const useFileLoad = ({
+  setNodes,
+  setEdges,
+  setNodeCounter,
+  onFileLoaded = null,
+  onHistoryReset = null,
+  onHistoryInitialize = null,
+  onCreateNewTab = null,
+  hasUnsavedChanges = () => false,
+  onSaveFile = null,
+  getCurrentFileName = () => "現在のファイル",
+}) => {
   // ========================================================================================
   // 状態管理
   // ========================================================================================
@@ -39,6 +52,85 @@ export const useFileLoad = ({ setNodes, setEdges, setNodeCounter, onFileLoaded =
 
   // 読み込み状態
   const [isLoadingFile, setIsLoadingFile] = useState(false);
+
+  // 保存確認ダイアログの状態
+  const [saveConfirmDialog, setSaveConfirmDialog] = useState({
+    isOpen: false,
+    fileName: "",
+    resolve: null,
+  });
+
+  // ========================================================================================
+  // ヘルパー関数
+  // ========================================================================================
+
+  /**
+   * 未保存の変更がある場合の保存確認ダイアログ
+   * @param {string} currentFileName - 現在のファイル名
+   * @returns {Promise<boolean>} 続行可能かどうか
+   */
+  const showSaveConfirmDialog = useCallback(async (currentFileName = "現在のファイル") => {
+    return new Promise((resolve) => {
+      setSaveConfirmDialog({
+        isOpen: true,
+        fileName: currentFileName,
+        resolve,
+      });
+    });
+  }, []);
+
+  // ダイアログを閉じる共通処理
+  const closeSaveConfirmDialog = useCallback(() => {
+    setSaveConfirmDialog({
+      isOpen: false,
+      fileName: "",
+      resolve: null,
+    });
+  }, []);
+
+  /**
+   * 保存確認ダイアログの処理
+   */
+  const handleSaveConfirm = useCallback(async () => {
+    if (onSaveFile && saveConfirmDialog.resolve) {
+      try {
+        await onSaveFile();
+        ConsoleMsg("success", "ファイルを保存しました。新しいファイルを読み込みます");
+        saveConfirmDialog.resolve(true);
+      } catch (error) {
+        ConsoleMsg("error", `保存に失敗しました: ${error.message}`);
+        // 保存に失敗した場合も続行可能にする（ユーザーの判断に委ねる）
+        saveConfirmDialog.resolve(true);
+      }
+    } else {
+      ConsoleMsg("warn", "保存機能が利用できません");
+      saveConfirmDialog.resolve(false);
+    }
+    closeSaveConfirmDialog();
+  }, [onSaveFile, saveConfirmDialog.resolve, closeSaveConfirmDialog]);
+
+  const handleDiscardConfirm = useCallback(() => {
+    if (saveConfirmDialog.resolve) {
+      ConsoleMsg("info", "変更を破棄して新しいファイルを読み込みます");
+      saveConfirmDialog.resolve(true);
+    }
+    closeSaveConfirmDialog();
+  }, [saveConfirmDialog.resolve, closeSaveConfirmDialog]);
+
+  const handleCancelConfirm = useCallback(() => {
+    if (saveConfirmDialog.resolve) {
+      ConsoleMsg("info", "ファイルを開く操作がキャンセルされました");
+      saveConfirmDialog.resolve(false);
+    }
+    closeSaveConfirmDialog();
+  }, [saveConfirmDialog.resolve, closeSaveConfirmDialog]);
+
+  // ダイアログ処理後の共通処理
+  useEffect(() => {
+    if (!saveConfirmDialog.isOpen && saveConfirmDialog.resolve === null) {
+      // ダイアログが閉じられた後の処理
+    }
+  }, [saveConfirmDialog.isOpen, saveConfirmDialog.resolve]);
 
   // ========================================================================================
   // ファイル読み込み機能
@@ -52,8 +144,12 @@ export const useFileLoad = ({ setNodes, setEdges, setNodeCounter, onFileLoaded =
     try {
       // 未保存の変更がある場合は確認
       if (hasUnsavedChanges()) {
-        const result = confirm("未保存の変更があります。ファイルを開きますか？変更は失われます。");
-        if (!result) return;
+        const currentFileName = getCurrentFileName();
+        const canContinue = await showSaveConfirmDialog(currentFileName);
+        if (!canContinue) {
+          ConsoleMsg("info", "ファイルを開く操作がキャンセルされました");
+          return;
+        }
       }
 
       // Tauriのファイル選択ダイアログを表示
@@ -136,7 +232,7 @@ export const useFileLoad = ({ setNodes, setEdges, setNodeCounter, onFileLoaded =
       isLoading.current = false;
       setIsLoadingFile(false);
     }
-  }, [setNodes, setEdges, setNodeCounter, onHistoryReset, onFileLoaded, hasUnsavedChanges]);
+  }, [setNodes, setEdges, setNodeCounter, onHistoryReset, onFileLoaded, hasUnsavedChanges, showSaveConfirmDialog, getCurrentFileName]);
 
   /**
    * 新しいタブでファイルを開く機能
@@ -277,5 +373,14 @@ export const useFileLoad = ({ setNodes, setEdges, setNodeCounter, onFileLoaded =
     // 状態
     isLoadingFile,
     isLoading: isLoading.current,
+
+    // ダイアログ制御
+    saveConfirmDialog: {
+      isOpen: saveConfirmDialog.isOpen,
+      fileName: saveConfirmDialog.fileName,
+      onSave: handleSaveConfirm,
+      onDiscard: handleDiscardConfirm,
+      onCancel: handleCancelConfirm,
+    },
   };
 };

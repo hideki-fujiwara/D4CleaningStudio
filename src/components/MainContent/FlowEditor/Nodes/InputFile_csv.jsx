@@ -4,7 +4,7 @@ import { Handle, Position, NodeResizer } from "@xyflow/react";
 /**
  * データベースシリンダーアイコン（SVG）
  */
-const DatabaseCylinderIcon = ({ size = 160, color = "#ffffff", stroke = "#ffffff", filename = "FILE名", className = "" }) => (
+const DatabaseCylinderIcon = ({ size = 105, color = "#ffffff", stroke = "#ffffff", filename = "FILE名", className = "" }) => (
   <svg width="100%" height="100%" viewBox="0 0 76 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} preserveAspectRatio="xMidYMid meet">
     {/* シリンダーの上面（楕円） */}
     <ellipse cx="38" cy="12" rx="35" ry="10" fill={color} stroke="none" />
@@ -51,7 +51,7 @@ const InputFile_csv = memo(({ data, isConnectable, selected }) => {
   }, []);
 
   // 初期サイズも比率計算を通す
-  const initialSize = calculateSize(data.width || 160, data.height || 120);
+  const initialSize = calculateSize(data.width || 100, data.height || 105);
 
   // ノードのサイズ状態（シリンダーの形状に合わせて調整）
   const [nodeSize, setNodeSize] = useState(initialSize);
