@@ -1,11 +1,11 @@
 import React, { memo, useState, useCallback, useEffect } from "react";
-import { Handle, Position, NodeResizer } from "reactflow";
+import { Handle, Position, NodeResizer } from "@xyflow/react";
 
 /**
  * データベースシリンダーアイコン（SVG）
  */
 const DatabaseCylinderIcon = ({ size = 160, color = "#ffffff", stroke = "#ffffff", filename = "FILE名", className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 76 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+  <svg width="100%" height="100%" viewBox="0 0 76 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} preserveAspectRatio="xMidYMid meet">
     {/* シリンダーの上面（楕円） */}
     <ellipse cx="38" cy="12" rx="35" ry="10" fill={color} stroke="none" />
     {/* シリンダーの底面 */}
@@ -129,8 +129,17 @@ const InputFile_csv = memo(({ data, isConnectable, selected }) => {
       )}
 
       {/* メインコンテンツ - データベースシリンダーのみ */}
-      <div className="w-full h-full flex items-center justify-center p-1">
-        <DatabaseCylinderIcon size={Math.min(nodeSize.width, nodeSize.height)} color={data.color || "#14b8a6"} stroke={data.stroke || "#ffffff"} filename={data.filename || "FILE名"} />
+      <div className="w-full h-full flex items-center justify-center p-2">
+        <div
+          style={{
+            width: nodeSize.width - 16,
+            height: nodeSize.height - 16,
+            maxWidth: "100%",
+            maxHeight: "100%",
+          }}
+        >
+          <DatabaseCylinderIcon color={data.color || "#14b8a6"} stroke={data.stroke || "#ffffff"} filename={data.filename || "FILE名"} />
+        </div>
       </div>
 
       {/* 右中央の出力ハンドル（データ出力用） */}

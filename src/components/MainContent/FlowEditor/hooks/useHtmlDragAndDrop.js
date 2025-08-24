@@ -3,7 +3,7 @@
  * バックアップファイルから動作確認済みの実装を移植
  */
 import { useCallback, useRef, useState } from "react";
-import { useReactFlow } from "reactflow";
+import { useReactFlow } from "@xyflow/react";
 import ConsoleMsg from "../../../../utils/ConsoleMsg";
 
 export const useHtmlDragAndDrop = (addNode) => {

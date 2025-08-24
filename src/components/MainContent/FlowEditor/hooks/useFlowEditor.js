@@ -19,7 +19,7 @@
  * @version 2.0.0 (Refactored)
  */
 import { useCallback, useState, useRef, useEffect } from "react";
-import { useNodesState, useEdgesState, addEdge, useReactFlow } from "reactflow";
+import { useNodesState, useEdgesState, addEdge, useReactFlow } from "@xyflow/react";
 import ConsoleMsg from "../../../../utils/ConsoleMsg";
 import DebugConfig from "../../../../utils/DebugConfig";
 import { initialNodes, initialEdges } from "../data/initialData";

@@ -1,6 +1,6 @@
 // filepath: d:\Project\tauri\D4CleaningStudio\src\components\FlowEditor\ShapeNode.jsx
 import React, { memo, useState, useCallback } from "react";
-import { Handle, Position, NodeResizer } from "reactflow";
+import { Handle, Position, NodeResizer } from "@xyflow/react";
 import { RectangleIcon, CircleIcon, TriangleIcon, DiamondIcon, HexagonIcon, StarIcon, ArrowIcon, EllipseIcon, RoundedRectIcon, ParallelogramIcon } from "./ShapeIcons";
 
 /**

@@ -1,5 +1,5 @@
 import React, { memo, useState, useCallback } from "react";
-import { Handle, Position, NodeResizer } from "reactflow";
+import { Handle, Position, NodeResizer } from "@xyflow/react";
 import CustomSimpleNode from "./CustomSimpleNode";
 import ShapeNode from "./ShapeNode";
 import InputFile_csv from "./InputFile_csv";

@@ -1,5 +1,5 @@
 import React, { memo, useState, useCallback } from "react";
-import { Handle, Position, NodeResizer } from "reactflow";
+import { Handle, Position, NodeResizer } from "@xyflow/react";
 
 /**
  * ディスクSVGアイコンコンポーネント

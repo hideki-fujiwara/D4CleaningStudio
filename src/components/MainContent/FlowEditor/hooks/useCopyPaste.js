@@ -9,7 +9,7 @@
  * @version 1.1.0
  */
 import { useCallback, useState, useRef, useEffect } from "react";
-import { useOnSelectionChange, useReactFlow } from "reactflow";
+import { useOnSelectionChange, useReactFlow } from "@xyflow/react";
 import ConsoleMsg from "../../../../utils/ConsoleMsg";
 
 /**

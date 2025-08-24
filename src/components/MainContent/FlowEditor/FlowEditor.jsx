@@ -10,7 +10,7 @@
  * @version 2.0.0 (Refactored)
  */
 import React from "react";
-import { ReactFlowProvider } from "reactflow";
+import { ReactFlowProvider } from "@xyflow/react";
 import FlowEditorContent from "./components/FlowEditorContent";
 
 // ========================================================================================
