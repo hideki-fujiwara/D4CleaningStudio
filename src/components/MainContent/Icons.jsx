@@ -68,9 +68,12 @@ export const OpenIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
  * キーボードショートカット: Ctrl+N
  */
 export const NewFileIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
-  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m2-2h-4" />
+  <svg className={className} fill={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20.25,16.5a2.236,2.236,0,0,0-1.528.608l-3.003-1.802a1.532,1.532,0,0,0,0-.613l3.003-1.802A2.243,2.243,0,1,0,18,11.25a2.201,2.201,0,0,0,.031.307l-3.003,1.802a2.25,2.25,0,1,0,0,3.283l3.003,1.802A2.201,2.201,0,0,0,18,18.75a2.25,2.25,0,1,0,2.25-2.25Zm0-6a.75.75,0,1,1-.75.75A.756.756,0,0,1,20.25,10.5ZM13.5,15.75a.75.75,0,1,1,.75-.75A.756.756,0,0,1,13.5,15.75Zm6.75,3.75a.75.75,0,1,1,.75-.75A.756.756,0,0,1,20.25,19.5Z" />
+    <circle cx="5.25" cy="6" r="0.75" />
+    <circle cx="5.25" cy="12" r="0.75" />
+    <circle cx="5.25" cy="18" r="0.75" />
+    <path d="M16.5,9.75V3.75a1.502,1.502,0,0,0-1.5-1.5H3A1.502,1.502,0,0,0,1.5,3.75V20.25A1.502,1.502,0,0,0,3,21.75H15V20.25H3V15.75h6V14.25H3V9.75ZM3,3.75H15v4.5H3Z" />
   </svg>
 );
 
@@ -107,7 +110,12 @@ export const RedoIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
  */
 export const CopyIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
   <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+    />
   </svg>
 );
 
@@ -118,7 +126,12 @@ export const CopyIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
  */
 export const PasteIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
   <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+    />
   </svg>
 );
 
@@ -129,7 +142,12 @@ export const PasteIcon = ({ className = "w-4 h-4", color = "currentColor" }) => 
  */
 export const DeleteIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
   <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+    />
   </svg>
 );
 
@@ -471,5 +489,56 @@ export const FolderPlusIcon = ({ className = "w-4 h-4", color = "currentColor" }
 export const CollapseIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
   <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+  </svg>
+);
+
+/**
+ * 鍵アイコン（ロック状態）
+ * セキュリティやロック状態を表現
+ */
+export const LockIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+  </svg>
+);
+
+/**
+ * 鍵アイコン（アンロック状態）
+ * セキュリティやアンロック状態を表現
+ */
+export const UnlockIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill="none" stroke={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+  </svg>
+);
+
+/**
+ * 認定証/証明書アイコン
+ * 文書の認証や重要性を表現（リボン付きドキュメント）
+ */
+export const CertificateIcon = ({ className = "w-4 h-4", color = "currentColor" }) => (
+  <svg className={className} fill={color} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    {/* ドキュメント本体の外枠 */}
+    <rect x="1.2" y="1" width="19.2" height="20" rx="0.6" ry="0.6" fill={color} stroke="none" />
+
+    {/* ドキュメント本体の内側（白い部分） */}
+    <rect x="2.4" y="2" width="16.8" height="18" fill="white" />
+
+    {/* ドキュメントの右上の折り返し */}
+    <path d="M16.8 1 L20.4 1 L20.4 4 L16.8 4 Z" fill={color} />
+    <path d="M16.8 2 L19.2 2 L19.2 4 L16.8 4 Z" fill="white" />
+
+    {/* 横線（テキスト部分） */}
+    <rect x="4.2" y="5" width="10.8" height="0.4" fill={color} />
+    <rect x="4.2" y="6.5" width="10.8" height="0.4" fill={color} />
+    <rect x="4.2" y="8" width="7.2" height="0.4" fill={color} />
+
+    {/* メダル/リボン部分 */}
+    <circle cx="17.4" cy="14" r="2.4" fill="white" stroke={color} strokeWidth="0.36" />
+    <circle cx="17.4" cy="14" r="1.44" fill={color} />
+
+    {/* リボンの垂れ下がり部分 */}
+    <path d="M15.6 15.5 L17.4 19 L19.2 15.5 L19.2 17 L17.4 17.5 L15.6 17 Z" fill={color} />
+    <path d="M16.2 15.5 L17.4 18 L18.6 15.5 L18.6 16.5 L17.4 17 L16.2 16.5 Z" fill="white" />
   </svg>
 );

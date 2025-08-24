@@ -12,7 +12,7 @@
 import React, { useState, useCallback } from "react";
 import { ReactFlow, MiniMap, Controls, Background, BackgroundVariant, ConnectionLineType, Panel, NodeResizer, ReactFlowProvider } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { nodeTypes } from "../CustomNodes";
+import { nodeTypes } from "../Nodes/CustomNodes";
 import FlowEditorToolbar from "../FlowEditorToolbar";
 import { useFlowEditor } from "../hooks/useFlowEditor";
 import { useHtmlDragAndDrop } from "../hooks/useHtmlDragAndDrop";
@@ -205,8 +205,6 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
         onAddTextNode={onAddTextNode}
         onAddSimpleNode={onAddSimpleNode}
         onAddCsvNode={onAddCsvNode}
-        onReset={onReset}
-        onClearAll={onClearAll}
         nodeCount={nodeCount}
         edgeCount={edgeCount}
         zoom={zoom}
@@ -292,36 +290,7 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
               color: isZoomDisabled ? "#92400e" : "#374151", // ロック時は暗い黄色、通常時はダークグレー
             }}
           />
-          ズーム無効時のロックアイコン
-          {isZoomDisabled && (
-            <div
-              style={{
-                position: "absolute",
-                bottom: "16px",
-                right: "16px",
-                pointerEvents: "none",
-                zIndex: 1000,
-              }}
-            >
-              <div
-                style={{
-                  backgroundColor: "rgba(245, 158, 11, 0.95)", // アンバー500
-                  border: "1px solid rgba(217, 119, 6, 0.8)", // アンバー600
-                  borderRadius: "6px",
-                  padding: "6px 8px",
-                  fontSize: "12px",
-                  fontWeight: "500",
-                  color: "#92400e", // アンバー800
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-                }}
-              >
-                🔒 <span>ロック中</span>
-              </div>
-            </div>
-          )}
+
           {/* ミニマップ */}
           <MiniMap
             id={`minimap-${tabId}`} // タブIDベースのユニークなID
@@ -440,7 +409,7 @@ function FlowEditorContentInner({ initialMode, loadedData, filePath, fileName, t
           </Panel>
           {/* ズーム無効時のオーバーレイ */}
           {isZoomDisabled && (
-            <Panel position="top-right" style={{ pointerEvents: "none" }}>
+            <Panel position="bottom-right" style={{ pointerEvents: "none" }}>
               <div
                 style={{
                   backgroundColor: "#fef3c7",

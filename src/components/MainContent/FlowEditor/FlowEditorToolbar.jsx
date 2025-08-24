@@ -44,8 +44,9 @@ import {
   TextIcon, // テキストノード追加
   NodeIcon, // シンプルノード追加
   CsvIcon, // CSVノード追加
-  ResetIcon, // 初期状態にリセット
-  TrashIcon, // すべてクリア
+  CertificateIcon, // 認定証/証明書
+  LockIcon, // 鍵（ロック状態）
+  UnlockIcon, // 鍵（アンロック状態）
 } from "../Icons";
 
 // ================================================================
@@ -121,11 +122,13 @@ const TooltipButton = ({ children, tooltip, onPress, isDisabled = false, classNa
  * @param {React.ReactNode} props.children - ボタン内のコンテンツ（通常はアイコン）
  * @param {string|React.ReactNode} props.tooltip - ツールチップのテキストまたはJSX
  * @param {boolean} props.defaultPressed - デフォルトの押下状態
+ * @param {boolean} props.isPressed - 制御された押下状態
+ * @param {function} props.onChange - 状態変更時のコールバック
  * @param {string} props.className - 追加のCSSクラス
  */
-const TooltipToggleButton = ({ children, tooltip, defaultPressed = false, className = BUTTON_STYLES.toggle, ...props }) => (
+const TooltipToggleButton = ({ children, tooltip, defaultPressed = false, isPressed, onChange, className = BUTTON_STYLES.toggle, ...props }) => (
   <TooltipTrigger delay={TOOLTIP_CONFIG.delay} closeDelay={TOOLTIP_CONFIG.closeDelay}>
-    <ToggleButton className={className} defaultPressed={defaultPressed} {...props}>
+    <ToggleButton className={className} defaultPressed={isPressed === undefined ? defaultPressed : undefined} isPressed={isPressed} onChange={onChange} {...props}>
       {children}
     </ToggleButton>
     <Tooltip className={TOOLTIP_STYLES.base} offset={TOOLTIP_CONFIG.offset}>
@@ -290,35 +293,15 @@ const ViewSettingsGroup = ({ isZoomDisabled = false, onZoomDisableChange, zoom =
     {/* セパレーター */}
     <div className="w-px h-4 bg-base-300 mx-1" />
 
-    {/* ズーム制御チェックボックス */}
-    <div className="flex items-center gap-0.5 px-2 py-1 rounded hover:bg-base-300 transition-colors cursor-pointer">
-      <Checkbox isSelected={isZoomDisabled} onChange={onZoomDisableChange} className="flex items-center gap-0.5">
-        <div className="w-4 h-4 border border-base-400 rounded bg-base-100 flex items-center justify-center data-[selected]:bg-primary data-[selected]:border-primary transition-colors">
-          {isZoomDisabled && (
-            <svg className="w-3 h-3 text-primary-content" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-          )}
-        </div>
-        <span className="text-sm text-base-content">{isZoomDisabled ? "🔒" : "🔓"}</span>
-      </Checkbox>
-      <Slider value={zoom * 100} onChange={(value) => onZoomChange && onZoomChange(value / 100)} minValue={25} maxValue={300} step={5} isDisabled={isZoomDisabled} className="w-36 flex items-center">
-        <div className="flex items-center w-full relative">
-          <SliderTrack className="w-full h-2 bg-base-300 rounded-full relative overflow-visible cursor-pointer">
-            <div className="h-full bg-primary rounded-full transition-all duration-200 ease-out" style={{ width: `${((zoom * 100 - 25) / (300 - 25)) * 100}%` }} />
-          </SliderTrack>
-          <SliderThumb
-            className="w-5 h-5 bg-white border-2 border-primary rounded-full shadow-lg cursor-grab active:cursor-grabbing focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ease-out absolute"
-            style={{
-              left: `calc(${((zoom * 100 - 25) / (300 - 25)) * 100}% - 10px)`,
-              top: "50%",
-              transform: "translateY(-50%)",
-            }}
-          />
-        </div>
-        <Label className="text-sm text-base-content font-mono">{Math.round(zoom * 100)}%</Label>
-      </Slider>
-    </div>
+    {/* 画面ロック/アンロック　ズーム倍率 */}
+    <TooltipToggleButton
+      tooltip={isZoomDisabled ? "クリックでズーム操作を有効にする" : "クリックでズーム操作を無効にする"}
+      isPressed={isZoomDisabled}
+      onChange={(pressed) => onZoomDisableChange?.(pressed)}
+    >
+      {isZoomDisabled ? <LockIcon className="w-6 h-6 text-warning" /> : <UnlockIcon className="w-6 h-6 text-success" />}
+      <span className="text-md text-base-content font-mono">{Math.round(zoom * 100)}%</span>
+    </TooltipToggleButton>
   </Group>
 );
 
@@ -361,40 +344,6 @@ const NodeAdditionGroup = ({ onAddTextNode, onAddSimpleNode, onAddCsvNode }) => 
     <DraggableNodeItem nodeType="inputFileCsv" tooltip="CSVノードをドラッグ&ドロップ">
       <CsvIcon className={BUTTON_STYLES.iconSize} />
     </DraggableNodeItem>
-  </Group>
-);
-
-/**
- * フロー操作グループ
- * リセット、全削除の機能を提供
- *
- * @param {Object} props - プロパティ
- * @param {function} props.onReset - フローリセットハンドラー
- * @param {function} props.onClearAll - 全ノードクリアハンドラー
- */
-const FlowOperationsGroup = ({ onReset, onClearAll }) => (
-  <Group className="flex items-center gap-1">
-    <TooltipButton
-      tooltip="フローを初期状態にリセット"
-      onPress={() => {
-        onReset();
-      }}
-    >
-      <ResetIcon className={BUTTON_STYLES.iconSize} />
-    </TooltipButton>
-
-    <TooltipButton
-      tooltip={
-        <div className="text-center">
-          <div className="text-red-300 font-semibold">⚠️ 注意</div>
-          <div>すべてのノードをクリア</div>
-          <div className="text-xs text-red-200">(復元できません)</div>
-        </div>
-      }
-      onPress={onClearAll}
-    >
-      <TrashIcon className={BUTTON_STYLES.iconSize} />
-    </TooltipButton>
   </Group>
 );
 
@@ -484,8 +433,6 @@ const StatisticsDisplay = ({ nodeCount, edgeCount, zoom, copyPaste, historyLengt
  * @param {function} props.onAddTextNode - テキストノード追加ハンドラー
  * @param {function} props.onAddSimpleNode - シンプルノード追加ハンドラー
  * @param {function} props.onAddCsvNode - CSVノード追加ハンドラー
- * @param {function} props.onReset - フローリセットハンドラー
- * @param {function} props.onClearAll - 全ノードクリアハンドラー
  * @param {number} props.nodeCount - ノード数（統計情報用）
  * @param {number} props.edgeCount - エッジ数（統計情報用）
  * @param {number} props.zoom - ズーム率（統計情報用）
@@ -508,8 +455,6 @@ const FlowEditorToolbar = ({
   onAddTextNode,
   onAddSimpleNode,
   onAddCsvNode,
-  onReset,
-  onClearAll,
   nodeCount = 0,
   edgeCount = 0,
   zoom = 1,
@@ -557,11 +502,6 @@ const FlowEditorToolbar = ({
         {/* ノード追加グループ */}
         <NodeAdditionGroup onAddTextNode={onAddTextNode} onAddSimpleNode={onAddSimpleNode} onAddCsvNode={onAddCsvNode} />
 
-        <Separator className={`w-px ${BUTTON_STYLES.separatorHeight} bg-base-300 mx-2`} />
-
-        {/* フロー操作グループ */}
-        <FlowOperationsGroup onReset={onReset} onClearAll={onClearAll} />
-
         {/* 右端のスペーサー */}
         <div className="flex-1" />
 
@@ -586,4 +526,4 @@ export { TOOLTIP_CONFIG, TOOLTIP_STYLES, BUTTON_STYLES };
 /**
  * 個別コンポーネントのエクスポート（必要に応じて）
  */
-export { FileOperationsGroup, EditOperationsGroup, ExecutionGroup, ViewSettingsGroup, NodeAdditionGroup, FlowOperationsGroup, StatisticsDisplay, TooltipButton, TooltipToggleButton };
+export { FileOperationsGroup, EditOperationsGroup, ExecutionGroup, ViewSettingsGroup, NodeAdditionGroup, StatisticsDisplay, TooltipButton, TooltipToggleButton };

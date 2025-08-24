@@ -1,6 +1,6 @@
 /**
  * ================================================================
- * FlowEditor カスタムフック（リファクタリング版）
+ * FlowEditor カスタムフック
  * ================================================================
  *
  * FlowEditorの主要機能を提供するカスタムフック
@@ -352,33 +352,6 @@ export const useFlowEditor = (
   // フロー操作
   // ========================================================================================
 
-  // リセット機能
-  const onReset = useCallback(() => {
-    const resetNodes = initialMode === "empty" ? [] : initialNodes;
-    const resetEdges = initialMode === "empty" ? [] : initialEdges;
-
-    setNodes(resetNodes);
-    setEdges(resetEdges);
-    setNodeCounter(1);
-
-    // 履歴をリセット
-    historyHookRef.current.resetHistory();
-
-    ConsoleMsg("info", "フローを初期状態にリセットしました");
-  }, [initialMode]);
-
-  // すべてクリア機能
-  const onClearAll = useCallback(() => {
-    setNodes([]);
-    setEdges([]);
-    setNodeCounter(1);
-
-    // 履歴をリセット
-    historyHookRef.current.resetHistory();
-
-    ConsoleMsg("info", "すべてのノードとエッジをクリアしました");
-  }, []);
-
   // ========================================================================================
   // コピー・ペースト機能
   // ========================================================================================
@@ -461,7 +434,14 @@ export const useFlowEditor = (
         event.preventDefault();
         event.stopPropagation(); // イベントの伝播も停止
         ConsoleMsg("info", `Ctrl+${event.key}: フローをリセットします`);
-        onReset();
+        
+        // リセット処理を直接実行
+        const resetNodes = initialMode === "empty" ? [] : initialNodes;
+        const resetEdges = initialMode === "empty" ? [] : initialEdges;
+        setNodes(resetNodes);
+        setEdges(resetEdges);
+        setNodeCounter(1);
+        historyHookRef.current.resetHistory();
       }
 
       // F5（リロード）処理 - 設定に基づいて制御
@@ -528,8 +508,6 @@ export const useFlowEditor = (
     onAddTextNode,
     onAddSimpleNode,
     onAddCsvNode,
-    onReset,
-    onClearAll,
 
     // 履歴機能
     undo: historyHook.undo,
