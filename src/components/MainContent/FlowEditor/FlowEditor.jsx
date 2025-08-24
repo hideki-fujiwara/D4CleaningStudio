@@ -10,7 +10,6 @@
  * @version 2.0.0 (Refactored)
  */
 import React from "react";
-import { ReactFlowProvider } from "@xyflow/react";
 import FlowEditorContent from "./components/FlowEditorContent";
 
 // ========================================================================================
@@ -32,31 +31,19 @@ import FlowEditorContent from "./components/FlowEditorContent";
  * @param {Function} props.onRequestTabClose - タブクローズ要求コールバック
  * @param {Function} props.onHistoryChange - 履歴変更通知コールバック
  */
-function FlowEditor({ 
-  initialMode = "default", 
-  loadedData = null, 
-  filePath = null, 
-  fileName = "NewFile", 
-  tabId, 
-  onCreateNewTab, 
-  onUpdateTab, 
-  onRequestTabClose, 
-  onHistoryChange 
-}) {
+function FlowEditor({ initialMode = "default", loadedData = null, filePath = null, fileName = "NewFile", tabId, onCreateNewTab, onUpdateTab, onRequestTabClose, onHistoryChange }) {
   return (
-    <ReactFlowProvider>
-      <FlowEditorContent
-        initialMode={initialMode}
-        loadedData={loadedData}
-        filePath={filePath}
-        fileName={fileName}
-        tabId={tabId}
-        onCreateNewTab={onCreateNewTab}
-        onUpdateTab={onUpdateTab}
-        onRequestTabClose={onRequestTabClose}
-        onHistoryChange={onHistoryChange}
-      />
-    </ReactFlowProvider>
+    <FlowEditorContent
+      initialMode={initialMode}
+      loadedData={loadedData}
+      filePath={filePath}
+      fileName={fileName}
+      tabId={tabId}
+      onCreateNewTab={onCreateNewTab}
+      onUpdateTab={onUpdateTab}
+      onRequestTabClose={onRequestTabClose}
+      onHistoryChange={onHistoryChange}
+    />
   );
 }
 
